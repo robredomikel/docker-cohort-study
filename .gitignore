@@ -3,6 +3,7 @@ data/
 non_validated_controls/
 myenv/
 .idea/
+consts/
 
 # Files not to be included
 *.ipynb

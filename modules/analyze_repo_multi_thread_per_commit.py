@@ -27,27 +27,30 @@ import yaml
 from filelock import Timeout, FileLock
 import networkx as nx
 from threading import Lock
+from commons import PROJECT_PATH
 
 # Global variables for path definitions
-DATA_PATH = "/home/mikel/projects/docker_cohort/microservices_analyzer/"
 
-with open('./consts/db.csv') as db_file:
+
+
+with open(PROJECT_PATH + '/consts/db.csv') as db_file:
     dbs = [db.lower() for db in db_file.read().splitlines()]
-with open('./consts/db-2.csv') as db_file:
+with open(PROJECT_PATH + '/consts/db-2.csv') as db_file:
     dbs += [db.lower() for db in db_file.read().splitlines()]
 dbs = list(set(dbs))
-with open('./consts/bus.csv') as bus_file:
+with open(PROJECT_PATH + '/consts/bus.csv') as bus_file:
     buses = [bus.lower() for bus in bus_file.read().splitlines()]
-with open('./consts/lang.csv') as lang_file:
+with open(PROJECT_PATH + '/consts/lang.csv') as lang_file:
     langs = [lang.lower() for lang in lang_file.read().splitlines()]
-with open('./consts/server.csv') as server_file:
+with open(PROJECT_PATH + '/consts/server.csv') as server_file:
     servers = [server.lower() for server in server_file.read().splitlines()]
-with open('./consts/gateway.csv') as gate_file:
+with open(PROJECT_PATH + '/consts/gateway.csv') as gate_file:
     gates = [gate.lower() for gate in gate_file.read().splitlines()]
-with open('./consts/monitor.csv') as monitor_file:
+with open(PROJECT_PATH + '/consts/monitor.csv') as monitor_file:
     monitors = [monitor.lower() for monitor in monitor_file.read().splitlines()]
-with open('./consts/discovery.csv') as disco_file:
+with open(PROJECT_PATH + '/consts/discovery.csv') as disco_file:
     discos = [disco.lower() for disco in disco_file.read().splitlines()]
+
 
 DATA = {
     'dbs': dbs, 'servers': servers, 'buses': buses, 'langs': langs, 'gates': gates, 'monitors': monitors,
