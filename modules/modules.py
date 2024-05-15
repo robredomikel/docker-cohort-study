@@ -446,3 +446,31 @@ def getFirstHash(project_name, project_type):
     earliest_row = df.loc[first_row_idx]
 
     return earliest_row['sha']
+
+
+def get_subset_resulting_projects():
+    """
+    Gets the subset of projects that accomplish the criteria for the trend analysis and adjusts the format for the required
+    path for the microservices analysis step.
+    """
+
+    trend_accepted_pro_list_path = os.path.join(CASES_PATH, "resulting_data", "lm_resulting_pros_trimonthly.txt")
+    with open(trend_accepted_pro_list_path, "r") as f:
+        project_list = f.read().splitlines()
+    f.close()
+
+    github_prefix = "https://github.com/"
+    clean_list = []
+    for project in project_list:
+
+        project_name = project[:-4]
+        path_format_name = project_name.replace("#", "/")
+        github_project_path = github_prefix + path_format_name
+        clean_list.append(github_project_path)
+
+    initial_project_dataset = pd.read_csv(os.path.join(CASES_PATH, "filtered_dataset.csv"))
+    subset_df = initial_project_dataset[initial_project_dataset["URL"].isin(clean_list)]
+
+    if not os.path.exists(os.path.join(CASES_PATH, "repos")):
+        os.mkdir(os.path.join(CASES_PATH, "repos"))
+    subset_df.to_csv(os.path.join(CASES_PATH, "repos", "selected_projects_repo_links.csv"), index=False)

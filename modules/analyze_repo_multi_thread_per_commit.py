@@ -692,7 +692,7 @@ def create_log_file():
     open(f"logs/{date}/errors_on_cloning.txt", "w")
 
 
-def main_micro(argv):
+def main_micro():
 
     fix_errors = False
     debug = True

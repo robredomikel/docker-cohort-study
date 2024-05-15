@@ -1,6 +1,6 @@
 import pandas as pd
 from trendAnalysis import trendAnalysis
-from modules import projectCrawler, dateFilter, powerAnalysis, issueCrawler
+from modules import projectCrawler, dateFilter, powerAnalysis, issueCrawler, get_subset_resulting_projects
 from commons import (COMPLETE_ANALYSIS, CASES_PATH, CONTROLS_PATH, CLONE_PROJECTS, POWER_ANALYSIS, REPO_ANALYSIS,
                      FINAL_FILE_CREATION)
 from clone_projects import cloneProjects
@@ -8,7 +8,7 @@ from get_confounders import getConfounders
 from find_ms_usage import getMsUsage
 from get_velocity import velocityAnalysis
 from format_data_for_analysis import merge_data
-from analyze_repo_multi_thread_per_commit import main
+from analyze_repo_multi_thread_per_commit import main_micro
 
 import os
 
@@ -221,9 +221,11 @@ def main():
     # Collect all the necessary variables from the cloned repositories
     if REPO_ANALYSIS:
 
-
-        # Check which case projects have an active MS usage
-
+        # Check which case projects have an active MS usage (From the Microservices dataset)
+        """
+        get_subset_resulting_projects()  # We get them from the resulting trend analysis
+        main_micro()
+        """
         # getMsUsage()
 
         print(f"> MS usage analysis stage performed")
@@ -235,7 +237,7 @@ def main():
         print(f"> Confounders collection stage performed")
         # Crawl the issues from the final projects
         # Get eligible cases from the ms_usage
-        eligible_cases = (open(os.path.join(CASES_PATH, "ms_eligible_projects", "eligibles.txt"), mode="r").read()
+        eligible_cases = (open(os.path.join(CASES_PATH, "ms_usage"), mode="r").read()
                           .splitlines())
         [issueCrawler(full_name=project_name, project_type="cases") for project_name in eligible_cases]
         eligible_controls = open(os.path.join(CONTROLS_PATH, "resulting_data/lm_resulting_pros_trimonthly.txt"), mode='r').read().splitlines()
