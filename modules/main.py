@@ -8,6 +8,7 @@ from get_confounders import getConfounders
 from find_ms_usage import getMsUsage
 from get_velocity import velocityAnalysis
 from format_data_for_analysis import merge_data
+from analyze_repo_multi_thread_per_commit import main
 
 import os
 
@@ -222,8 +223,8 @@ def main():
 
 
         # Check which case projects have an active MS usage
-        # NEED TO PUT DARIO'S CODE HERE!!
-        getMsUsage()
+
+        # getMsUsage()
 
         print(f"> MS usage analysis stage performed")
 

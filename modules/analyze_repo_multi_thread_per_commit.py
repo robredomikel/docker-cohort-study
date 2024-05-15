@@ -692,10 +692,12 @@ def create_log_file():
     open(f"logs/{date}/errors_on_cloning.txt", "w")
 
 
-def main(argv):
+def main_micro(argv):
+
     fix_errors = False
-    debug = False
+    debug = True
     num_workers = None
+    """
     if len(argv) > 1:
         opts, args = getopt.getopt(argv,"fdw:")
         for opt, arg in opts:
@@ -705,10 +707,12 @@ def main(argv):
                 debug = True
             if opt == '-w':
                 num_workers = int(arg)
+    """
     create_log_file()
     # I set for debug purposes the number of threads as 1 and the debug mode as True
     analyze_all(fix_errors=fix_errors, debug=debug, max_workers=num_workers)
 
-
+"""
 if __name__ == "__main__":
     main(sys.argv[1:])
+"""
