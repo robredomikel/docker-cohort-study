@@ -1,4 +1,4 @@
-
+import shutil
 import time
 import git
 import pydriller as drill
@@ -118,6 +118,19 @@ def getRepositoryStatistics(git_repo_path):
     return results_df
 
 
+def delete_directory(directory_path):
+    """
+    Deletes the cloned repository
+    """
+    if os.path.exists(directory_path):
+        shutil.rmtree(directory_path)
+    else:
+        print("Repository directory not found.")
+        with open(LOG_FILE_PATH, 'a') as f:
+            f.write(str("-- Failed to delete reposity") + "for Project" + ";" + directory_path + '\n')
+        f.close()
+
+
 def getConfounders(project_list, project_type):
     """
     Performs the entire process of analyzing confounders
@@ -167,6 +180,7 @@ def getConfounders(project_list, project_type):
             except:
                 print(repo_name, ": could not checkout back to master !!")
 
+        delete_directory(directory_path=repo_dir)
         print("GETTING CONFOUNDERS: Project {} from project group {} processed. Processing {}/{}".format(repo_name,
                                                                                                          project_type,
                                                                                                          count+1,
