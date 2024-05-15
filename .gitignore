@@ -1,0 +1,10 @@
+# Data settings
+data/
+non_validated_controls/
+myenv/
+.idea/
+
+# Files not to be included
+*.ipynb
+*.Rproj
+.DS_Store
