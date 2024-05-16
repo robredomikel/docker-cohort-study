@@ -1,3 +1,4 @@
+
 import pandas as pd
 from trendAnalysis import trendAnalysis
 from modules import projectCrawler, dateFilter, powerAnalysis, issueCrawler, get_subset_resulting_projects

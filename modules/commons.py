@@ -20,7 +20,6 @@ FINAL_FILE_CREATION = True
 
 CHECKOUT_BACK_TO_MASTER = False
 
-
 # list of most used languages based on TIOBE INDEX (https://www.tiobe.com/tiobe-index/programminglanguages_definition/#instances)
 TIOBE_LIST = ['foxpro', 'fox pro', 'vfp', 'vfpa', 'enterprise script', '4d', '4th dimension', 'abap', 'abc',
               'actionscript', 'as1', 'as2', 'as3', 'ada', 'agilent vee', 'algol', 'alice', 'angelscript', 'apex',
