@@ -1,11 +1,11 @@
 # COMMON PATHS & DATA USED WITHIN DIFFERENT MODULES
 import pandas as pd
 
-PROJECT_PATH = "/Users/mrobredo23/OULU/docker_cohort-24"
-CASES_PATH = "/Users/mrobredo23/OULU/docker_cohort-24/data/cases"
-CONTROLS_PATH = "/Users/mrobredo23/OULU/docker_cohort-24/data/controls"
-DATA_PATH = "/Users/mrobredo23/OULU/docker_cohort-24/data/"
-LOG_FILE_PATH = "/Users/mrobredo23/OULU/docker_cohort-24/error-repo-log.txt"
+PROJECT_PATH = "/home/mikel/projects/docker_cohort/docker_cohort-24"
+CASES_PATH = "/home/mikel/projects/docker_cohort/docker_cohort-24/data/cases"
+CONTROLS_PATH = "/home/mikel/projects/docker_cohort/docker_cohort-24/data/controls"
+DATA_PATH = "/home/mikel/projects/docker_cohort/docker_cohort-24/data/"
+LOG_FILE_PATH = "/home/mikel/projects/docker_cohort/docker_cohort-24/error-repo-log.txt"
 
 GITHUB_REPO_PATH = "https://api.github.com/repos/"
 PROJECT_CREATION_FIRST = pd.to_datetime("01/01/2016", utc=True)  # We consider a longer project creation window
@@ -13,7 +13,7 @@ PROJECT_CREATION_LAST = pd.to_datetime("01/06/2021", utc=True)
 github_token = ""
 
 COMPLETE_ANALYSIS = False
-CLONE_PROJECTS = True
+CLONE_PROJECTS = False
 POWER_ANALYSIS = False
 REPO_ANALYSIS = True
 FINAL_FILE_CREATION = True
