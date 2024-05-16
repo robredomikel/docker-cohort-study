@@ -8,6 +8,7 @@ import numpy as np
 import subprocess
 import os
 from dateutil.relativedelta import relativedelta
+import re
 
 from commons import DATA_PATH, CASES_PATH, CONTROLS_PATH, TIOBE_LIST, LOG_FILE_PATH
 from find_ms_usage import getFirstCommit
@@ -19,50 +20,6 @@ INDEPENDENT_VAR = "MS/NonMS"
 INCLUDED_COLUMNS = ["full_name", "velocity_mean_end", "velocity_mean_start", "MS/NonMS", "size",
                     "main_language", "n_languages", "creation_year", "n_commits", "n_issues", "n_contributors"]
 # PRINTS = {"languages": True, "repo_descriptive_statistics": True, "df_info": True}
-
-NON_PROGRAMMING_LANGUAGES = [
-    "Markdown",  # .md
-    "Plain Text",  # .txt
-    "Makefile",  # Makefile
-    "YAML",  # .yaml, .yml
-    "JSON",  # .json
-    "XML",  # .xml
-    "Dockerfile",  # Dockerfile
-    "Batchfile",  # .bat (for Windows batch scripts)
-    "INI",  # .ini (configuration files)
-    "TOML",  # .toml (configuration files)
-    "Properties",  # .properties (Java properties files)
-    "Shell",
-    "Properties File",
-    "License",
-    "RestructuredText",
-    "Extensible Stylesheet Language Transformations",
-    "BASH",
-    "CMake",
-    "AsciiDoc",
-    "ClojureScript",
-    "gitignore",
-    "XML Schema",
-    "MSBuild",
-    "reStructuredText",
-    "ReStructuredText",
-    "Autoconf",
-    "Systemd",
-    "Docker ignore",
-    "CSV",
-    "SVG",
-    "CloudFormation (YAML)",
-    "Gemfile",
-    "Gherkin Specification",
-    "Rakefile",
-    "Batch",
-    "Powershell",
-    "Gradle",
-    "Freemarker Template",
-    "Bitbucket Pipeline",
-    "Arvo",
-    "Bazel"
-]
 
 
 def checkCommits(data):
@@ -91,9 +48,10 @@ def checkCommits(data):
         project_creation_date = getFirstCommit(project_name=f"{pro}.csv", project_type=pro_type)
         start_follow_up_date = project_creation_date + relativedelta(months=12)
 
-        df.date = pd.to_datetime(df.date, utc=True)
+        df['date'] = pd.to_datetime(df['date'], utc=True)
         # We do not consider commits made by bots.
-        subset_df = df[df.date.between(project_creation_date, start_follow_up_date) & ~df.author_login.str.contains("bot", case=False)]
+        subset_df = df[~df.author_login.str.contains(r"bot", case=False, na=False)]
+        subset_df = subset_df[subset_df.date.between(project_creation_date, start_follow_up_date)]
         contributors = len(subset_df.author_login.unique())  # Likewise, we have exclude those commits that are made by bots.
         creation_year = project_creation_date.year
         n_commits = len(subset_df)
@@ -160,8 +118,8 @@ def get_all_issues_until_followup(projects_list):
         project_creation_date = getFirstCommit(project_name=f"{project}.csv", project_type=pro_type)
         follow_up_start_date = project_creation_date + relativedelta(months=12)
         df = read_csv_correctly(file_path=issue_pro_file_path)
-        df.date = pd.to_datetime(df.created_at, utc=True)
-        subset_df = df[df.created_at.between(project_creation_date, follow_up_start_date)]
+        df["created_at"] = pd.to_datetime(df["created_at"], utc=True)
+        subset_df = df[df["created_at"].between(project_creation_date, follow_up_start_date)]
         n_issues = len(subset_df)
         num_issues_list.append(n_issues)
         print(f"Processed projects for the issue counting: {count}/{len(projects_list)}")
@@ -239,7 +197,8 @@ def get_project_size(data):
     Gets the size of the project based on lines of Code from used programming languages within the TIOBE index
     """
 
-    subset_df = data[data['Name'].str.lower() in TIOBE_LIST & data['Name'] not in NON_PROGRAMMING_LANGUAGES]
+    # first_subset_df = data[~data['Name'].isin(np.array(NON_PROGRAMMING_LANGUAGES))] 
+    subset_df = data[data['Name'].str.lower().isin(np.array(TIOBE_LIST))]
     size = subset_df.Code.sum()
     return size
 
@@ -272,7 +231,7 @@ def checkLanguages(data):
         df = check_header_cases(df=df)
 
         # Includes purely programming languages.
-        languages = [lang for lang in df.Name.tolist() if lang not in NON_PROGRAMMING_LANGUAGES]
+        languages = [lang for lang in df.Name.tolist() if lang.lower() in TIOBE_LIST]
 
         for i in range(len(df)):
             if df.Name[i] in languages:
@@ -313,10 +272,8 @@ def check_trimmed_languages(data):
         df = check_header_cases(df=df)
 
         # Includes purely programming languages.
-        languages = [lang for lang in df.Name.tolist() if lang not in NON_PROGRAMMING_LANGUAGES]
-        # Check if these languages exist in the TIOBE INDEX
-        languages_clean = [lang for lang in languages if lang.lower() not in TIOBE_LIST]
-        n_languages.append(len(languages_clean))
+        languages = [lang for lang in df.Name.tolist() if lang.lower() in TIOBE_LIST]
+        n_languages.append(len(languages))
 
     return n_languages
 
@@ -355,7 +312,8 @@ def checkMissingValues(data_df):
     velocity_start_subset = data_df.loc[data_df['velocity_mean_start'].isnull()]['full_name']
     velocity_end_subset = data_df.loc[data_df['velocity_mean_end'].isnull()]['full_name']
     main_language_subset = data_df.loc[data_df['main_language'].isnull()]['full_name']
-    all_names = pd.concat([velocity_start_subset, velocity_end_subset, main_language_subset])
+    size_subset = data_df.loc[data_df["size"] == 0]["full_name"]
+    all_names = pd.concat([velocity_start_subset, velocity_end_subset, main_language_subset, size_subset])
     missing_values_pros = all_names.unique()
     cases = 0
     controls = 0
