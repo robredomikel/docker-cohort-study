@@ -156,7 +156,14 @@ def getConfounders(project_list, project_type):
     n_repos = len(project_list)
 
     for count, repo_name in enumerate(project_list):
-
+        
+        if repo_name + ".csv" in os.listdir(path=output_confounders_dir):
+            print(f"Project {repo_name} already processed for confounder collection")
+            print("GETTING CONFOUNDERS: Project {} from project group {} processed. Processing {}/{}".format(repo_name,
+                                                                                                            project_type,
+                                                                                                            count+1,
+                                                                                                            len(project_list)))
+            continue
         repo_dir = os.path.join(repositories_dir, repo_name)
         try:
             git_repo = git.Repo(repo_dir)
