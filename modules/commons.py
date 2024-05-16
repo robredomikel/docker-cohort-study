@@ -15,7 +15,7 @@ github_token = ""
 COMPLETE_ANALYSIS = False
 CLONE_PROJECTS = False
 POWER_ANALYSIS = False
-REPO_ANALYSIS = True
+REPO_ANALYSIS = False
 FINAL_FILE_CREATION = True
 
 CHECKOUT_BACK_TO_MASTER = False
@@ -25,7 +25,7 @@ TIOBE_LIST = ['foxpro', 'fox pro', 'vfp', 'vfpa', 'enterprise script', '4d', '4t
               'actionscript', 'as1', 'as2', 'as3', 'ada', 'agilent vee', 'algol', 'alice', 'angelscript', 'apex',
               'apl', 'applescript', 'arc', 'aspectj', 'assembly', 'assembly language', 'atlas', 'autohotkey', 'ahk',
               'autoit', 'autolisp', 'automator', 'avenue', 'awk', 'mawk', 'gawk', 'nawk', 'b4x', 'ballerina', 'bash',
-              'basic (confidence', 'bbc basic', 'bc', 'bcpl', 'beta', 'blitzmax', 'blitzbasic', 'blitz basic', 'boo',
+              'basic', 'bbc basic', 'bc', 'bcpl', 'beta', 'blitzmax', 'blitzbasic', 'blitz basic', 'boo',
               'bourne shell', 'sh', 'brainfuck', 'csh', 'c shell', 'c#', 'c-sharp', 'c sharp', 'csharp', 'csharp.net',
               'c#.net', 'c++', 'c++/cli', 'c-omega', 'c', 'caml', 'carbon', 'ceylon', 'cfml', 'coldfusion', 'cg', 'ch',
               'chapel', 'chill', 'cil', 'citrine', 'cl', 'clarion', 'visual basic', 'clean', 'clipper', 'clips',
@@ -34,7 +34,7 @@ TIOBE_LIST = ['foxpro', 'fox pro', 'vfp', 'vfpa', 'enterprise script', '4d', '4t
               'dbl', 'synergy/de', 'dibol', 'dylan', 'e', 'ecmascript', 'egl', 'eiffel', 'elixir', 'elm', 'emacs lisp',
               'elisp', 'emerald', 'erlang', 'etoys', 'euphoria', 'exec', 'f#', 'f-sharp', 'fsharp', 'f sharp', 'factor',
               'falcon', 'fantom', 'felix', 'forth', 'fortran', 'fortress', 'freebasic', 'gambas', 'gams', 'glsl', 'gml',
-              'gamemaker language', 'gnu octave', 'go, golang', 'gosu', 'groovy', 'gpath', 'gsql', 'groovy++', 'hack',
+              'gamemaker language', 'gnu octave', 'go', 'golang', 'gosu', 'groovy', 'gpath', 'gsql', 'groovy++', 'hack',
               'harbour', 'haskell', 'haxe', 'heron', 'hpl', 'hypertalk', 'icon',
               'idl', 'idris', 'inform', 'informix-4gl', 'intercal', 'io', 'ioke', 'j#', 'j', 'jade',
               'java', 'javafx script', 'javascript', 'js', 'ssjs', 'jscript', 'jscript.net', 'julia', 'julialang',
@@ -42,7 +42,7 @@ TIOBE_LIST = ['foxpro', 'fox pro', 'vfp', 'vfpa', 'enterprise script', '4d', '4t
               'korn shell', 'ksh', 'kotlin', 'labview', 'ladder logic', 'lasso', 'limbo', 'lingo', 'lisp', 'revolution', 'livecode',
               'logo', 'lotusscript', 'lpc', 'lua', 'luajit', 'lustre', 'm4', 'mad', 'magic',
               'magik', 'malbolge', 'mantis', 'maple', 'matlab', 'max/msp', 'maxscript', 'mdx', 'mel', 'mercury', 'miva', 'ml',
-              'modula-2', 'modula-3', 'mojo', 'monkey', 'moo', 'moto', 'mql4, mql5', 'ms-dos batch', 'mumps', 'natural',
+              'modula-2', 'modula-3', 'mojo', 'monkey', 'moo', 'moto', 'mql4', 'mql5', 'ms-dos batch', 'mumps', 'natural',
               'nemerle', 'netlogo', 'nim', 'nimrod', 'nix', 'nqc', 'nsis', 'nxt-g', 'oberon', 'object rexx', 'oorexx', 'open object rexx',
               'objective-c', 'objc', 'obj-c', 'objective caml', 'ocaml', 'occam', 'opencl',
               'progress', 'progress 4gl', 'abl', 'advanced business language', 'openedge', 'opl', 'oxygene', 'oz', 'paradox',
@@ -58,4 +58,4 @@ TIOBE_LIST = ['foxpro', 'fox pro', 'vfp', 'vfpa', 'enterprise script', '4d', '4t
               't-sql', 'transact-sql', 'tsql', 'typescript', 'ts', 'uniface', 'vala', 'genie', 'vbscript', 'vhdl',
               'visual basic .net', 'vb.net', 'visual basic.net', 'visual basic', 'wasm', 'webassembly', 'webdna',
               'whitespace', 'mathematica', 'wolfram', 'x++', 'x10', 'xbase', 'xbase++', 'xc', 'xen', 'realbasic', 'xojo',
-              'xpl', 'xquery', 'xslt', 'xtend', 'yacc', 'yorick', 'z shell', 'zsh', 'zig', 'zlang']
+              'xpl', 'xquery', 'xslt', 'xtend', 'yacc', 'yorick', 'z shell', 'zsh', 'zig', 'zlang', "shell"]
