@@ -66,34 +66,45 @@ def checkoutToCommitBeforeFollowUp(git_repo, project_name, project_type, repo_di
     project_creation_date = getFirstCommit(project_name=project_name, project_type=project_type)
     start_follow_up_date = project_creation_date + relativedelta(months=12)
     # end_follow_up_date = start_follow_up_date + relativedelta(months=15)
-    first_commit_hash = getFirstHash(project_name=project_name, project_type=project_type)
+    
+    # LOGIC: Some commit hashes in GitHub do not exist in the cloned repositories, therefore we use this implementation in order to not to fall in the exception.
+    num_excluded_hashes = 0  # NUm of index lines we go again into the commits file to check the next commit
+    while True:
+        first_commit_hash = getFirstHash(project_name=project_name, project_type=project_type, excluded_hashes=num_excluded_hashes)
 
-    # Get the default branch of the repository
-    default_branch = get_default_branch(repo_path=repo_dir)
+        # Get the default branch of the repository
+        default_branch = get_default_branch(repo_path=repo_dir)
 
-    # commits = drill.Repository(repo_dir, from_commit=first_commit_hash, order="reverse").traverse_commits()
-    commit_to_checkout = None
+        # commits = drill.Repository(repo_dir, from_commit=first_commit_hash, order="reverse").traverse_commits()
+        commit_to_checkout = None
 
-    excesive_traversal = 0
-    # Traverses all the commits from the repository from the last commit in the repository until the one specified (the first one). But stops based on our date criteria
-    for commit in drill.Repository(repo_dir, from_commit=first_commit_hash, order="reverse").traverse_commits():
-        commit_time = commit.author_date
-        # Gets the last commit before the follow-up date from the default branch
-        if commit_time < start_follow_up_date:
-            # Returns true if the selected commit is within the main branch
-            if is_commit_in_branch(repo_dir, commit_hash=commit.hash, branch_name=default_branch) is False:
-                excesive_traversal += 1
-                continue
+        # Traverses all the commits from the repository from the last commit in the repository until the one specified (the first one). But stops based on our date criteria
+        try:
+            
+            excesive_traversal = 0
+            for commit in drill.Repository(repo_dir, from_commit=first_commit_hash, order="reverse").traverse_commits():
+                commit_time = commit.author_date
+                # Gets the last commit before the follow-up date from the default branch
+                if commit_time < start_follow_up_date:
+                    # Returns true if the selected commit is within the main branch
+                    if is_commit_in_branch(repo_dir, commit_hash=commit.hash, branch_name=default_branch) is False:
+                        excesive_traversal += 1
+                        continue
 
-            # We check if the activity right before the follow-up period date start is not given in the main branch.
-            if excesive_traversal > 10:
-                with open(LOG_FILE_PATH, 'a') as f:
-                    f.write(str(f"-- LOG TRAVERSAL ERROR for project: {repo_dir}, more than 10 commits before the "
-                                f"start follow-up date without pushing into the default branch\n"))
+                    # We check if the activity right before the follow-up period date start is not given in the main branch.
+                    if excesive_traversal > 10:
+                        with open(LOG_FILE_PATH, 'a') as f:
+                            f.write(str(f"-- LOG TRAVERSAL ERROR for project: {repo_dir}, more than 10 commits before the "
+                                        f"start follow-up date without pushing into the default branch\n"))
 
-            commit_to_checkout = commit
-            print("checking out to", commit_time, commit)
-            break
+                    commit_to_checkout = commit
+                    print("checking out to", commit_time, commit)
+                    break
+            break  # If everything went well, exit the loop
+        
+        except Exception as e:
+            print(e)
+            num_excluded_hashes+=1
 
     try:
         # Stash any uncommitted changes

@@ -4,6 +4,7 @@ non_validated_controls/
 myenv/
 .idea/
 consts/
+modules/__pycache__/
 
 # Files not to be included
 *.ipynb

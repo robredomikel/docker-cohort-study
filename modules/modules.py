@@ -434,7 +434,7 @@ def issueCrawler(full_name, project_type):
     print(f"Issue collection for project {full_name} COMPLETED")
 
 
-def getFirstHash(project_name, project_type):
+def getFirstHash(project_name, project_type, excluded_hashes):
 
     if project_type == "cases":
         project_path = os.path.join(CASES_PATH, "commits", project_name)
@@ -442,7 +442,7 @@ def getFirstHash(project_name, project_type):
         project_path = os.path.join(CONTROLS_PATH, "commits", project_name)
 
     df = pd.read_csv(project_path)
-    first_row_idx = df["date"].idxmin()  # Gets the row index of the earliest commit date
+    first_row_idx = df["date"].idxmin() - excluded_hashes # Gets the row index of the earliest commit date
     earliest_row = df.loc[first_row_idx]
 
     return earliest_row['sha']
