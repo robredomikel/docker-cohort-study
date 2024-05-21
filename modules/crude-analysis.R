@@ -29,17 +29,23 @@ qq_plot <- function(data, covariate_name, group_column) {
 # CRUDE ANALYSIS
 ###########################################
 
-df <- read.csv('final_data_file.csv')
-df <- df[c(1:2, 6, 4, 3, 5 , 7, 8:ncol(df))]
+raw_df <- read.csv('/Users/mrobredo23/OULU/docker_cohort-24/data/final_data_file.csv')
+View(raw_df)
+df <- df[c(2:3, 5:ncol(df))] # For the modelling purposes
+View(df)
+df$main_language <- as.numeric(as.factor(df$main_language))
+df$creation_year <- as.numeric(as.factor(df$creation_year))
 
-# df$main_language <- as.numeric(as.factor(df$main_language))
-# df$creation_year <- as.numeric(as.factor(df$creation_year))
+plot(raw_df$velocity_mean_end, raw_df$velocity_mean_start)
+
+# Conditional plot of the power of the independent variable
+coplot(velocity_mean_end~velocity_mean_start|MS.NonMS, col = "red", rows = 1, data = df)
 
 View(df)
-cases_df <- df[ df$MS.NonMS =='MS',] 
+cases_df <- raw_df[raw_df$MS.NonMS =='MS',] 
 cases_endvelocity <- abs(cases_df$velocity_mean_end)
 
-controls_df <- df[ df$MS.NonMS =='~MS',]
+controls_df <- raw_df[raw_df$MS.NonMS =='~MS',]
 controls_endvelocity <- abs(controls_df$velocity_mean_end)
 
 ## ASSESSING NORMALITY
@@ -64,6 +70,8 @@ par(mfrow=c(1,1))
 shapiro.test(cases_endvelocity) # For cases
 shapiro.test(controls_endvelocity) # For controls
 # Massively non-normal.
+# We reject the H0 (data normally distributed) and therefore asssume that there is no statistical significance to say
+# that the data is normally distributed.
 
 
 ############################################
@@ -74,38 +82,55 @@ shapiro.test(controls_endvelocity) # For controls
 # Ho: Adoption of Docker has impact on the development velocity.
 # Ha: Adoption of Docker does not have impact on the development velocity.
 
-mean(cases_endvelocity)
-mean (controls_endvelocity) 
-sd(cases_endvelocity)
-sd(controls_endvelocity)
+# 1. Data is numeric (CHECK)
 
-# Mmm somewhat similar variances
+# 2. Observations are independent between each other. (CHECK)
+# We assume it as we both populations are filled by projects that are independent from each other by the nature of data.
+
+
+# 3. Sample means are normally distributed (CHECK - They aren't)
+# NOTE: According to the CLT a population whose sample of n=30 is normally distributed, it will be approximately distributed.
+par(mfrow=c(2,1))
+cases_sample <- sample(cases_endvelocity, size = 30)
+hist(cases_sample, main="Sample mean for Cases end velocity", freq=F)
+curve(dnorm(x, mean = mean(cases_sample), sd=sd(cases_sample)), add = T, col="red")
+controls_sample <- sample(controls_endvelocity, size = 30)
+hist(cases_sample_mean, main="Sample mean for Cases end velocity", freq=F)
+curve(dnorm(x, mean = controls_sample_mean, sd=sd(controls_sample)), add = T, col="red")
+
+# 4. The variances between the groups are equal (CHECK - They aren't)
+(sd(cases_endvelocity))^2
+(sd(controls_endvelocity))^2
+
+# NOTES: There is enough evidence that show we do not fulfill the assumptions to run a Independent two-way samples t-test.
+
+##### HYPOTHESIS TESTING
+# Left tile hypothesis (less)
+# Ho: The velocity is higher in cases than in controls (for us would be less because we are looking for a smaller mean velocity in cases)
+# Ha: Otherwise
+
+# Two sided hypothesis
+# Ho: The velocity median in both groups is equal
+# Ha: The velocity median in both groups is different 
 
 # Assuming equal variance
 t.test(cases_endvelocity, controls_endvelocity, var.equal = TRUE)
 # Trying the left sided sample t-test
 t.test(cases_endvelocity, controls_endvelocity, var.equal = TRUE, alternative = 'two.sided')
 t.test(cases_endvelocity, controls_endvelocity, var.equal = TRUE, alternative = 'less')
-t.test(cases_endvelocity, controls_endvelocity, var.equal = TRUE, alternative = 'greater')
+# LOGIC
 
 # Assuming different variance (Welch's t-test)
 t.test(cases_endvelocity, controls_endvelocity, var.equal = FALSE)
 # Trying the left sided sample t-test
 t.test(cases_endvelocity, controls_endvelocity, var.equal = FALSE, alternative = 'two.sided')
 t.test(cases_endvelocity, controls_endvelocity, var.equal = FALSE, alternative = 'less')
-t.test(cases_endvelocity, controls_endvelocity, var.equal = FALSE, alternative = 'greater')
 
 
 
 ## Wilcoxon rank sum test (Non parametric) ~ two sample, hence MANN-WHITNEY
-wilcox.test(cases_endvelocity, controls_endvelocity, alternative = "greater")
 wilcox.test(cases_endvelocity, controls_endvelocity, alternative = "two.sided")
 wilcox.test(cases_endvelocity, controls_endvelocity, alternative = "less")
-
-# With correction
-wilcox.test(cases_endvelocity, controls_endvelocity, alternative = "greater", correct = T)
-wilcox.test(cases_endvelocity, controls_endvelocity, alternative = "two.sided", correct = T)
-wilcox.test(cases_endvelocity, controls_endvelocity, alternative = "less", correct = T)
 
 # We reject in both cases the null-hypothesis
 
@@ -113,7 +138,7 @@ wilcox.test(cases_endvelocity, controls_endvelocity, alternative = "less", corre
 # MATCHED DATA
 
 # Observational boxplots of the groups.
-data_long <- pivot_longer(df, cols = c(velocity_mean_start:n_contributors), names_to = "Covariate", values_to = "Value")
+data_long <- pivot_longer(df, cols = c(velocity_mean_start, size, creation_year:trimmed_languages), names_to = "Covariate", values_to = "Value")
 
 ggplot(data_long, aes(x = Covariate, y = Value, fill = MS.NonMS)) +
   geom_boxplot() + # Draw boxplots
@@ -162,7 +187,9 @@ ggplot(df_creation, aes(x = creation_year, y = Count, fill = as.factor(MS.NonMS)
 m.propensity_tol_1 <- matchit(as.numeric(as.factor(df$MS.NonMS)) - 1 ~ as.numeric(as.factor(main_language)), data = df, method = "nearest")
 summary(m.propensity_tol_1) # 1:1 tolerance
 data_m.propensity_1 <- match.data(m.propensity_tol_1)
-data_long_m_propensity_1 <- pivot_longer(data_m.propensity_1, cols = velocity_mean_start:n_contributors, names_to = "Covariate", values_to = "Value")
+data_long_m_propensity_1 <- pivot_longer(data_m.propensity_1, 
+                                         cols = c(velocity_mean_start, size:
+                                                  n_contributors), names_to = "Covariate", values_to = "Value")
 
 # Q-Q plot
 plots <- lapply(unique(data_long_m_propensity_1$Covariate), function(cov) {
@@ -184,7 +211,7 @@ ggplot(data_long_m_propensity_1, aes(x = Covariate, y = Value, fill = MS.NonMS))
 m.propensity_tol_3 <- matchit(as.factor(df$MS.NonMS) ~ as.factor(main_language), data = df, method = "nearest", ratio = 3)
 summary(m.propensity_tol_3) # 1:3 tolerance (3 controls per treatment)
 data_m.propensity_3 <- match.data(m.propensity_tol_3)
-data_long_m_propensity_3 <- pivot_longer(data_m.propensity_3, cols = velocity_mean_start:n_contributors, names_to = "Covariate", values_to = "Value")
+data_long_m_propensity_3 <- pivot_longer(data_m.propensity_3, cols = c(velocity_mean_start, size:n_contributors), names_to = "Covariate", values_to = "Value")
 
 # Q-Q plot
 plots <- lapply(unique(data_long_m_propensity_3$Covariate), function(cov) {
@@ -206,7 +233,7 @@ ggplot(data_long_m_propensity_3, aes(x = Covariate, y = Value, fill = MS.NonMS))
 m.propensity_tol_4 <- matchit(as.factor(df$MS.NonMS) ~ as.factor(main_language), data = df, method = "nearest", ratio = 4)
 summary(m.propensity_tol_4) # 1:4 tolerance (4 controls per treatment)
 data_m.propensity_4 <- match.data(m.propensity_tol_4)
-data_long_m_propensity_4 <- pivot_longer(data_m.propensity_4, cols = velocity_mean_start:n_contributors, names_to = "Covariate", values_to = "Value")
+data_long_m_propensity_4 <- pivot_longer(data_m.propensity_4, cols = c(velocity_mean_start, size:n_contributors), names_to = "Covariate", values_to = "Value")
 
 # Q-Q plot
 plots <- lapply(unique(data_long_m_propensity_4$Covariate), function(cov) {
@@ -230,8 +257,15 @@ ggplot(data_long_m_propensity_4, aes(x = Covariate, y = Value, fill = MS.NonMS))
 
 m.exact_1 <- matchit(as.factor(df$MS.NonMS) ~ as.factor(main_language), data = df, method = "exact")
 summary(m.exact_1)
+#Sample Sizes:
+#.             Control Treated
+#All            306.        53
+#Matched (ESS)  249.91      52
+#Matched        283.        52
+#Unmatched       23.         1
+#Discarded        0.         0
 data_m.exact_1 <- as.data.frame(match.data(m.exact_1))
-data_long_exact_1 <- pivot_longer(data_m.exact_1, cols = velocity_mean_start:n_contributors, names_to = "Covariate", values_to = "Value")
+data_long_exact_1 <- pivot_longer(data_m.exact_1, cols = c(velocity_mean_start, size:n_contributors), names_to = "Covariate", values_to = "Value")
 
 # Q-Q plot
 plots <- lapply(unique(data_long_exact_1$Covariate), function(cov) {
@@ -259,8 +293,8 @@ original_rows <- rownames(df)
 discarded_rows <- setdiff(original_rows, matched_rows)
 
 # 4. Extract discarded rows from the original dataframe
-discarded_data <- df[discarded_rows, ]
-
+discarded_data <- raw_df[discarded_rows, ]
+non_discarded_data <- raw_df[matched_rows, ]
 # Check the first few rows of the discarded data
 head(discarded_data)
 
@@ -269,7 +303,7 @@ head(discarded_data)
 m.optimal_1 <- matchit(as.factor(df$MS.NonMS) ~ as.factor(main_language), data = df, method = "optimal", ratio = 1)
 summary(m.optimal_1) # 1:1 tolerance
 data_m.optimal_1 <- match.data(m.optimal_1)
-data_long_optimal_1 <- pivot_longer(data_m.optimal_1, cols = velocity_mean_start:n_contributors, names_to = "Covariate", values_to = "Value")
+data_long_optimal_1 <- pivot_longer(data_m.optimal_1, cols = c(velocity_mean_start, size:n_contributors), names_to = "Covariate", values_to = "Value")
 
 # Q-Q plot
 plots <- lapply(unique(data_long_optimal_1$Covariate), function(cov) {
@@ -286,6 +320,20 @@ ggplot(data_long_optimal_1, aes(x = Covariate, y = Value, fill = MS.NonMS)) +
        x = "Covariate",
        y = "Value") +
   facet_wrap(~ Covariate, scales = "free") # Create a separate plot for each covariate
+
+
+# 1. Get row names of the matched data
+matched_rows_optimal <- rownames(data_m.optimal_1)
+
+# 2. Get row names of the original data
+original_rows_optimal <- rownames(df)
+
+# 3. Find rows that were discarded (those in original not in matched)
+discarded_rows_optimal <- setdiff(original_rows_optimal, matched_rows_optimal)
+
+# 4. Extract discarded rows from the original dataframe
+discarded_data_optimal <- raw_df[discarded_rows_optimal, ]
+non_discarded_data_optimal <- raw_df[matched_rows_optimal, ]
 
 ###### 3:1 tolerance
 m.optimal_3 <- matchit(as.factor(df$MS.NonMS) ~ as.factor(main_language), data = df, method = "optimal", ratio = 3)
@@ -330,17 +378,4 @@ ggplot(data_long_optimal_4, aes(x = Covariate, y = Value, fill = MS.NonMS)) +
        x = "Covariate",
        y = "Value") +
   facet_wrap(~ Covariate, scales = "free") # Create a separate plot for each covariate
-
-
-
-################# Covariate Matching
-
-
-
-################# Mahalanobis Distance Matching
-
-
-
-################# Coarsened Exact Matching
-
 

@@ -260,16 +260,18 @@ def cropProject(project_path, project_file, periodicity):
     project_shape = project_df.shape
 
     if periodicity == "monthly":
-        minimum_periods = 24
-    elif periodicity == "bimonthly":
         minimum_periods = 12
-    elif periodicity == "trimonthly":
-        minimum_periods = 8
-    else:
+    elif periodicity == "bimonthly":
         minimum_periods = 6
+    elif periodicity == "trimonthly":
+        minimum_periods = 4
+    else:
+        minimum_periods = 3
 
     if project_shape[0] >= minimum_periods:  # Checks if the history of the project is more than 20 months.
-        subset_df = project_df.iloc[0:minimum_periods,]
+        initial_creation_year = minimum_periods-1  # Considering the index starting at 0
+        # We consider the next follow-up observations
+        subset_df = project_df.iloc[initial_creation_year:initial_creation_year+minimum_periods,]
         operation_flag = True
         return operation_flag, subset_df
     else:

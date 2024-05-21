@@ -7,6 +7,8 @@ library(ggplot2)
 library(tidyr)  # For pivoting the data
 library(gridExtra) 
 library(dplyr)
+library(car)
+library(rgl)
 
 ###########################################
 # DESCRIPTIVE ANALYSIS
@@ -20,25 +22,35 @@ model <- lm(velocity_mean_end ~  factor(MS.NonMS) + velocity_mean_start +
 summary(model)
 par(mfrow = c(2, 2))
 plot(model)
-autoplot(model)
+avPlots(model)
+crPlots(model)
 
 # 1. Linearity assumption (Residuals vs Fitted values)
 # The blue line should go approximately horizontal and next to 0. If there is
 # Some pronounced pattern then means  there is no perfect linearity
+autoplot(model)
+# NOTE: The mean of the residuals deviate clearly negatively from the reference linear line...
+ggscatter(
+  data_m.exact_1, x = "velocity_mean_start", y = "velocity_mean_end",
+  facet.by  = c("creation_year", "MS.NonMS"), 
+  short.panel.labs = FALSE
+)+
+  stat_smooth(method = "loess", span = 2)
+
 
 # 2. Homogeneity of Variance (Scale-location)
 # The line should go horizontal and not follow any trend, therefore showing homogeneity, if not then that means that the residuals have non-constant variance (heterocedasticity)
 # Try to 1) Remove outliers, 2) log or square transform of the dependent variable.
-levene_test(model$residuals ~ factor(MS.NonMS) + velocity_mean_start +
-              size + n_languages + factor(creation_year) + n_commits + n_issues +
-              n_contributors, data = model)
+levene_test(data_m.exact_1, model$residuals ~ factor(MS.NonMS))
 
 # 3. Normality of residuals (Normal Q-Q plot)
 # The residuals should follow the diagonal line.
-shapiro.test(model$effects) 
+shapiro.test(model$residuals) 
+# We reject the H0 (residuals normally distributed) and therefore assume that there is no statistical significance to say
+# that the data is normally distributed.
 
 # 4. Homogeneity of regression slopes
-anova.test <- anova_test(velocity_mean_end ~ MS.NonMS + velocity_mean_start +
+anova.test <- anova_test(velocity_mean_end ~ factor(MS.NonMS) + velocity_mean_start +
                            size + n_languages + factor(creation_year) + n_commits + n_issues +
                            n_contributors, data = data_m.exact_1)
 anova.test
@@ -64,3 +76,15 @@ plots <- lapply(unique(df_long$Variable), function(var) {
 
 # Arrange the plots in a 2 by 4 grid
 do.call(grid.arrange, c(plots, ncol = 4, nrow = 2))
+
+
+
+########################################
+# considering caegorical outcome
+########################################
+
+logistic_model <- glm(factor(non_discarded_data_optimal$velocity_bool_end) ~ velocity_mean_start+factor(MS.NonMS)+size+factor(main_language)+
+                        n_languages+factor(creation_year)+n_commits+n_issues+n_contributors, family=binomial(link='logit'), data = data_m.optimal_1)
+summary(logistic_model)
+
+best_model <- step(logistic_model)

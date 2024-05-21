@@ -10,3 +10,4 @@ modules/__pycache__/
 *.ipynb
 *.Rproj
 .DS_Store
+.Rproj.user
