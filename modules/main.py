@@ -224,7 +224,7 @@ def main():
 
         # Check which case projects have an active MS usage (From the Microservices dataset)
         
-        get_subset_resulting_projects()  # We get them from the resulting trend analysis
+        # get_subset_resulting_projects()  # We get them from the resulting trend analysis
         main_micro()
         
         # getMsUsage()
@@ -232,26 +232,26 @@ def main():
         print(f"> MS usage analysis stage performed")
 
         # Collect confounders from the chosen projects
-        getConfounders(project_list=os.listdir(os.path.join(CASES_PATH, "repositories")), project_type="cases")
-        getConfounders(project_list=os.listdir(os.path.join(CONTROLS_PATH, "repositories")), project_type="controls")
+        # getConfounders(project_list=os.listdir(os.path.join(CASES_PATH, "repositories")), project_type="cases")
+        # getConfounders(project_list=os.listdir(os.path.join(CONTROLS_PATH, "repositories")), project_type="controls")
 
         print(f"> Confounders collection stage performed")
         # Crawl the issues from the final projects
         # Get eligible cases from the ms_usage
-    
-        eligible_cases = os.listdir(os.path.join(CASES_PATH, "complete-results"))
-        [issueCrawler(full_name=project_name, project_type="cases") for project_name in eligible_cases]
-        eligible_controls = open(os.path.join(CONTROLS_PATH, "resulting_data/lm_resulting_pros_trimonthly.txt"), mode='r').read().splitlines()
-        [issueCrawler(full_name=project_name, project_type="controls") for project_name in eligible_controls]
+        
+        #eligible_cases = os.listdir(os.path.join(CASES_PATH, "complete-results"))
+        #[issueCrawler(full_name=project_name, project_type="cases") for project_name in eligible_cases]
+        #eligible_controls = open(os.path.join(CONTROLS_PATH, "resulting_data/lm_resulting_pros_trimonthly.txt"), mode='r').read().splitlines()
+        #[issueCrawler(full_name=project_name, project_type="controls") for project_name in eligible_controls]
         
         print(f"> Issue collection stage performed")
 
         # Get velocity of the obtained projects.
         
-        cases_issues = os.path.join(CASES_PATH, "issue_history")
-        velocityAnalysis(input_folder=cases_issues)
-        controls_issues = os.path.join(CONTROLS_PATH, "issue_history")
-        velocityAnalysis(input_folder=controls_issues)
+        #cases_issues = os.path.join(CASES_PATH, "issue_history")
+        #velocityAnalysis(input_folder=cases_issues)
+        #controls_issues = os.path.join(CONTROLS_PATH, "issue_history")
+        #velocityAnalysis(input_folder=controls_issues)
         
         print("> Velocity measuring stage performed")
 

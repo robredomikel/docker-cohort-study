@@ -1,0 +1,11 @@
+Traceback (most recent call last):
+  File "/home/mikel/projects/docker_cohort/docker_cohort-24/modules/analyze_repo_multi_thread_per_commit.py", line 471, in analyze_repo
+    gr = pydrill.Git(workdir)
+  File "/home/mikel/projects/docker_cohort/docker_cohort-24/myenv/lib64/python3.9/site-packages/pydriller/git.py", line 61, in __init__
+    self._open_repository()
+  File "/home/mikel/projects/docker_cohort/docker_cohort-24/myenv/lib64/python3.9/site-packages/pydriller/git.py", line 87, in _open_repository
+    self._repo = Repo(str(self.path))
+  File "/home/mikel/projects/docker_cohort/docker_cohort-24/myenv/lib64/python3.9/site-packages/git/repo/base.py", line 224, in __init__
+    raise NoSuchPathError(epath)
+git.exc.NoSuchPathError: /home/mikel/projects/docker_cohort/microservices_analyzer/temp/hotosm-tasking-manager/tasking-manager
+;https://github.com/hotosm/tasking-manager
