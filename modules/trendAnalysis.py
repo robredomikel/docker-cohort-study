@@ -85,13 +85,13 @@ def makePlot(project_data, data_type, fig_path, linearity_output, periodicity):
 
         commit_df = pd.read_csv(os.path.join(f"{fig_path}/serialized_data", f"{data_type}/{project_data}"))
         if linearity_output is False:
-            fig = px.line(commit_df, x="Time (Years)", y="Commit count")
+            fig = px.line(commit_df, x="date", y="commit_count")
             fig.update_traces(line=dict(color='red'))
             fig.update_layout(title={'text': f"{figure_name}",
                                  "xanchor": "center",
                                  'x': 0.5})
         else:
-            fig = px.line(commit_df, x="Time (Years)", y="Commit count")
+            fig = px.line(commit_df, x="date", y="commit_count")
             fig.update_layout(title={'text': f"{figure_name}",
                                      "xanchor": "center",
                                      'x': 0.5})
@@ -102,13 +102,13 @@ def makePlot(project_data, data_type, fig_path, linearity_output, periodicity):
     else:
         issue_df = pd.read_csv(os.path.join(f"{fig_path}/serialized_data", f"{data_type}/{project_data}"))
         if linearity_output is False:
-            fig = px.line(issue_df, x="Time (Years)", y="Issue count")
+            fig = px.line(issue_df, x="date", y="issue_count")
             fig.update_traces(line=dict(color='red'))
             fig.update_layout(title={'text': f"{figure_name}",
                                      "xanchor": "center",
                                      'x': 0.5})
         else:
-            fig = px.line(issue_df, x="Time (Years)", y="Issue count")
+            fig = px.line(issue_df, x="date", y="issue_count")
             fig.update_layout(title={'text': f"{figure_name}",
                                      "xanchor": "center",
                                      'x': 0.5})
@@ -200,7 +200,7 @@ def trendAnalysis(project_type, periodicity):
     processed_count = 0
     for period_commits, period_issues in zip(commits_files, issues_files):
 
-        # Crop the monthly time series to fit the time considered by the paper (24 months)
+        # Crop the monthly time series to fit the time considered by the paper (12 months)
         ts_commits_project = cropProject(project_path=os.path.join(f"{path}/serialized_data", f"{periodicity}_commits"),
                                          project_file=period_commits, periodicity=periodicity)  # 0: flag, 1: subset df
         ts_issues_project = cropProject(project_path=os.path.join(f"{path}/serialized_data", f"{periodicity}_issues"),

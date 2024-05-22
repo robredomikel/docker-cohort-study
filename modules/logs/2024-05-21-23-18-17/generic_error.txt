@@ -1,0 +1,102 @@
+Traceback (most recent call last):
+  File "/home/mikel/projects/docker_cohort/docker_cohort-24/modules/analyze_repo_multi_thread_per_commit.py", line 465, in analyze_repo
+    start_follow_up_date, end_follow_up_date = get_followup_dates(project_name=pro_name) # Follow-up date limits
+  File "/home/mikel/projects/docker_cohort/docker_cohort-24/modules/analyze_repo_multi_thread_per_commit.py", line 380, in get_followup_dates
+    df = pd.read_csv(os.path.join(DATA_PATH, "commits", project_csv_path))
+  File "/home/mikel/projects/docker_cohort/docker_cohort-24/myenv/lib64/python3.9/site-packages/pandas/io/parsers/readers.py", line 1024, in read_csv
+    return _read(filepath_or_buffer, kwds)
+  File "/home/mikel/projects/docker_cohort/docker_cohort-24/myenv/lib64/python3.9/site-packages/pandas/io/parsers/readers.py", line 618, in _read
+    parser = TextFileReader(filepath_or_buffer, **kwds)
+  File "/home/mikel/projects/docker_cohort/docker_cohort-24/myenv/lib64/python3.9/site-packages/pandas/io/parsers/readers.py", line 1618, in __init__
+    self._engine = self._make_engine(f, self.engine)
+  File "/home/mikel/projects/docker_cohort/docker_cohort-24/myenv/lib64/python3.9/site-packages/pandas/io/parsers/readers.py", line 1878, in _make_engine
+    self.handles = get_handle(
+  File "/home/mikel/projects/docker_cohort/docker_cohort-24/myenv/lib64/python3.9/site-packages/pandas/io/common.py", line 873, in get_handle
+    handle = open(
+FileNotFoundError: [Errno 2] No such file or directory: '/home/mikel/projects/docker_cohort/docker_cohort-24/data/commits/golastmile#rasa_nlu.csv'
+;https://github.com/golastmile/rasa_nlu
+Traceback (most recent call last):
+  File "/home/mikel/projects/docker_cohort/docker_cohort-24/modules/analyze_repo_multi_thread_per_commit.py", line 465, in analyze_repo
+    start_follow_up_date, end_follow_up_date = get_followup_dates(project_name=pro_name) # Follow-up date limits
+  File "/home/mikel/projects/docker_cohort/docker_cohort-24/modules/analyze_repo_multi_thread_per_commit.py", line 380, in get_followup_dates
+    df = pd.read_csv(os.path.join(DATA_PATH, "commits", project_csv_path))
+  File "/home/mikel/projects/docker_cohort/docker_cohort-24/myenv/lib64/python3.9/site-packages/pandas/io/parsers/readers.py", line 1024, in read_csv
+    return _read(filepath_or_buffer, kwds)
+  File "/home/mikel/projects/docker_cohort/docker_cohort-24/myenv/lib64/python3.9/site-packages/pandas/io/parsers/readers.py", line 618, in _read
+    parser = TextFileReader(filepath_or_buffer, **kwds)
+  File "/home/mikel/projects/docker_cohort/docker_cohort-24/myenv/lib64/python3.9/site-packages/pandas/io/parsers/readers.py", line 1618, in __init__
+    self._engine = self._make_engine(f, self.engine)
+  File "/home/mikel/projects/docker_cohort/docker_cohort-24/myenv/lib64/python3.9/site-packages/pandas/io/parsers/readers.py", line 1878, in _make_engine
+    self.handles = get_handle(
+  File "/home/mikel/projects/docker_cohort/docker_cohort-24/myenv/lib64/python3.9/site-packages/pandas/io/common.py", line 873, in get_handle
+    handle = open(
+FileNotFoundError: [Errno 2] No such file or directory: '/home/mikel/projects/docker_cohort/docker_cohort-24/data/commits/hyperledger#besu.csv'
+;https://github.com/hyperledger/besu
+Traceback (most recent call last):
+  File "/home/mikel/projects/docker_cohort/docker_cohort-24/modules/analyze_repo_multi_thread_per_commit.py", line 465, in analyze_repo
+    start_follow_up_date, end_follow_up_date = get_followup_dates(project_name=pro_name) # Follow-up date limits
+  File "/home/mikel/projects/docker_cohort/docker_cohort-24/modules/analyze_repo_multi_thread_per_commit.py", line 380, in get_followup_dates
+    df = pd.read_csv(os.path.join(DATA_PATH, "commits", project_csv_path))
+  File "/home/mikel/projects/docker_cohort/docker_cohort-24/myenv/lib64/python3.9/site-packages/pandas/io/parsers/readers.py", line 1024, in read_csv
+    return _read(filepath_or_buffer, kwds)
+  File "/home/mikel/projects/docker_cohort/docker_cohort-24/myenv/lib64/python3.9/site-packages/pandas/io/parsers/readers.py", line 618, in _read
+    parser = TextFileReader(filepath_or_buffer, **kwds)
+  File "/home/mikel/projects/docker_cohort/docker_cohort-24/myenv/lib64/python3.9/site-packages/pandas/io/parsers/readers.py", line 1618, in __init__
+    self._engine = self._make_engine(f, self.engine)
+  File "/home/mikel/projects/docker_cohort/docker_cohort-24/myenv/lib64/python3.9/site-packages/pandas/io/parsers/readers.py", line 1878, in _make_engine
+    self.handles = get_handle(
+  File "/home/mikel/projects/docker_cohort/docker_cohort-24/myenv/lib64/python3.9/site-packages/pandas/io/common.py", line 873, in get_handle
+    handle = open(
+FileNotFoundError: [Errno 2] No such file or directory: '/home/mikel/projects/docker_cohort/docker_cohort-24/data/commits/wellcometrust#wellcomecollection.org.csv'
+;https://github.com/wellcometrust/wellcomecollection.org
+Traceback (most recent call last):
+  File "/home/mikel/projects/docker_cohort/docker_cohort-24/modules/analyze_repo_multi_thread_per_commit.py", line 465, in analyze_repo
+    start_follow_up_date, end_follow_up_date = get_followup_dates(project_name=pro_name) # Follow-up date limits
+  File "/home/mikel/projects/docker_cohort/docker_cohort-24/modules/analyze_repo_multi_thread_per_commit.py", line 380, in get_followup_dates
+    df = pd.read_csv(os.path.join(DATA_PATH, "commits", project_csv_path))
+  File "/home/mikel/projects/docker_cohort/docker_cohort-24/myenv/lib64/python3.9/site-packages/pandas/io/parsers/readers.py", line 1024, in read_csv
+    return _read(filepath_or_buffer, kwds)
+  File "/home/mikel/projects/docker_cohort/docker_cohort-24/myenv/lib64/python3.9/site-packages/pandas/io/parsers/readers.py", line 618, in _read
+    parser = TextFileReader(filepath_or_buffer, **kwds)
+  File "/home/mikel/projects/docker_cohort/docker_cohort-24/myenv/lib64/python3.9/site-packages/pandas/io/parsers/readers.py", line 1618, in __init__
+    self._engine = self._make_engine(f, self.engine)
+  File "/home/mikel/projects/docker_cohort/docker_cohort-24/myenv/lib64/python3.9/site-packages/pandas/io/parsers/readers.py", line 1878, in _make_engine
+    self.handles = get_handle(
+  File "/home/mikel/projects/docker_cohort/docker_cohort-24/myenv/lib64/python3.9/site-packages/pandas/io/common.py", line 873, in get_handle
+    handle = open(
+FileNotFoundError: [Errno 2] No such file or directory: '/home/mikel/projects/docker_cohort/docker_cohort-24/data/commits/cortexproject#cortex.csv'
+;https://github.com/cortexproject/cortex
+Traceback (most recent call last):
+  File "/home/mikel/projects/docker_cohort/docker_cohort-24/modules/analyze_repo_multi_thread_per_commit.py", line 465, in analyze_repo
+    start_follow_up_date, end_follow_up_date = get_followup_dates(project_name=pro_name) # Follow-up date limits
+  File "/home/mikel/projects/docker_cohort/docker_cohort-24/modules/analyze_repo_multi_thread_per_commit.py", line 380, in get_followup_dates
+    df = pd.read_csv(os.path.join(DATA_PATH, "commits", project_csv_path))
+  File "/home/mikel/projects/docker_cohort/docker_cohort-24/myenv/lib64/python3.9/site-packages/pandas/io/parsers/readers.py", line 1024, in read_csv
+    return _read(filepath_or_buffer, kwds)
+  File "/home/mikel/projects/docker_cohort/docker_cohort-24/myenv/lib64/python3.9/site-packages/pandas/io/parsers/readers.py", line 618, in _read
+    parser = TextFileReader(filepath_or_buffer, **kwds)
+  File "/home/mikel/projects/docker_cohort/docker_cohort-24/myenv/lib64/python3.9/site-packages/pandas/io/parsers/readers.py", line 1618, in __init__
+    self._engine = self._make_engine(f, self.engine)
+  File "/home/mikel/projects/docker_cohort/docker_cohort-24/myenv/lib64/python3.9/site-packages/pandas/io/parsers/readers.py", line 1878, in _make_engine
+    self.handles = get_handle(
+  File "/home/mikel/projects/docker_cohort/docker_cohort-24/myenv/lib64/python3.9/site-packages/pandas/io/common.py", line 873, in get_handle
+    handle = open(
+FileNotFoundError: [Errno 2] No such file or directory: '/home/mikel/projects/docker_cohort/docker_cohort-24/data/commits/fedspendingtransparency#usaspending-api.csv'
+;https://github.com/fedspendingtransparency/usaspending-api
+Traceback (most recent call last):
+  File "/home/mikel/projects/docker_cohort/docker_cohort-24/modules/analyze_repo_multi_thread_per_commit.py", line 465, in analyze_repo
+    start_follow_up_date, end_follow_up_date = get_followup_dates(project_name=pro_name) # Follow-up date limits
+  File "/home/mikel/projects/docker_cohort/docker_cohort-24/modules/analyze_repo_multi_thread_per_commit.py", line 380, in get_followup_dates
+    df = pd.read_csv(os.path.join(DATA_PATH, "commits", project_csv_path))
+  File "/home/mikel/projects/docker_cohort/docker_cohort-24/myenv/lib64/python3.9/site-packages/pandas/io/parsers/readers.py", line 1024, in read_csv
+    return _read(filepath_or_buffer, kwds)
+  File "/home/mikel/projects/docker_cohort/docker_cohort-24/myenv/lib64/python3.9/site-packages/pandas/io/parsers/readers.py", line 618, in _read
+    parser = TextFileReader(filepath_or_buffer, **kwds)
+  File "/home/mikel/projects/docker_cohort/docker_cohort-24/myenv/lib64/python3.9/site-packages/pandas/io/parsers/readers.py", line 1618, in __init__
+    self._engine = self._make_engine(f, self.engine)
+  File "/home/mikel/projects/docker_cohort/docker_cohort-24/myenv/lib64/python3.9/site-packages/pandas/io/parsers/readers.py", line 1878, in _make_engine
+    self.handles = get_handle(
+  File "/home/mikel/projects/docker_cohort/docker_cohort-24/myenv/lib64/python3.9/site-packages/pandas/io/common.py", line 873, in get_handle
+    handle = open(
+FileNotFoundError: [Errno 2] No such file or directory: '/home/mikel/projects/docker_cohort/docker_cohort-24/data/commits/hmcts#ccpay-payment-app.csv'
+;https://github.com/hmcts/ccpay-payment-app

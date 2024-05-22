@@ -18,7 +18,7 @@ import pandas as pd
 from tqdm import tqdm
 import pydriller as pydrill
 
-nltk.download('punkt')
+# nltk.download('punkt')
 import string
 import subprocess
 import json
@@ -27,7 +27,7 @@ import yaml
 from filelock import Timeout, FileLock
 import networkx as nx
 from threading import Lock
-from commons import PROJECT_PATH
+from commons import PROJECT_PATH, CASES_PATH, DATA_PATH
 
 # Global variables for path definitions
 
@@ -377,7 +377,7 @@ def get_followup_dates(project_name):
     """
 
     project_csv_path = project_name + ".csv"
-    df = pd.read_csv(os.path.join(DATA_PATH, "commits", project_csv_path))
+    df = pd.read_csv(os.path.join(CASES_PATH, "commits", project_csv_path))
     df['date'] = pd.to_datetime(df['date'])
     first_commit_project = df['date'].min()
 
@@ -399,7 +399,11 @@ def get_ms_usage_commits(project_name, start_date, end_date):
 
     output_list = []
     project_file = project_name + ".csv"
+<<<<<<< HEAD
     ms_usage_file_path = os.path.join(CASES, "commits", project_file)
+=======
+    ms_usage_file_path = os.path.join(CASES_PATH, "commits", project_file)
+>>>>>>> 643dc0b17f45db939c4472f4798fc9f5f71e60ab
     file_df = pd.read_csv(ms_usage_file_path, delimiter=",")
     commit_list = file_df['sha'].tolist()
     datetime_list = file_df['date'].tolist()
@@ -448,7 +452,7 @@ def analyze_repo(url, wlock, project_id=None):
             # outfile = path.join('results', analysis['name'].replace('/', '#').replace('_', '#',1))
             # outfile = "%s.json" % (outfile,)
             outdir = path.join('results', analysis['name'].replace('/', '#').replace('_', '#',1))
-            project_rels_dir_path = os.path.join(DATA_PATH, outdir)
+            project_rels_dir_path = os.path.join(CASES_PATH, outdir)
 
             if not path.exists(project_rels_dir_path):  # If the directory with the results doesn't exist
                 os.mkdir(project_rels_dir_path)
@@ -612,10 +616,11 @@ def url(project_id):
 def analyze_all(max_workers=None, fix_errors=False, debug=False):
     content = ""
     try:
-        repos = Path('repos').glob('*.csv')
+        repo_dir = os.path.join(CASES_PATH, "repos")
+        repos = Path(repo_dir).glob('*.csv')
         repos = sorted([str(x) for x in repos])
         os.makedirs('temp', exist_ok=True)
-        analyzed = os.listdir('results')
+        analyzed = os.listdir(os.path.join(CASES_PATH, 'results'))
         if fix_errors:
             analyzed = [x.replace('https://github.com/', '').replace("#", "_", 1).replace(".json", "") for x in analyzed]
 
@@ -644,13 +649,13 @@ def analyze_all(max_workers=None, fix_errors=False, debug=False):
                 #     _ = executor.submit(analyze_repo, repo, writer_lock)
 
     except Exception as e:
-        number_of_analyzed_project = len(os.listdir('results'))
+        number_of_analyzed_project = len(os.listdir(os.path.join(CASES_PATH, 'results')))
         errors = open(LOG_FILES["num_errors"], 'r').read()
         content = f'Subject: MS DATASET\n\nTHE PROCESS IS INTERRUPTED DUE TO THE FOLLOWING ERROR:\n{e}\n{traceback.format_exc()}\n\t- Analyzed projects: {number_of_analyzed_project}\n\t- Missing projects: {412030 - number_of_analyzed_project - int(errors)}\n\t- Error projects: {int(errors)}'
         with open(LOG_FILES["generic_error"], 'a') as f:
             f.write(str(e) + '\n')
     else:
-        number_of_analyzed_project = len(os.listdir('results'))
+        number_of_analyzed_project = len(os.listdir(os.path.join(CASES_PATH, 'results')))
         content = f"Subject: MS DATASET\n\nTHE PROCESS IS COMPLETED:\n\t- Analyzed project: {number_of_analyzed_project}"
 
     finally:
@@ -700,6 +705,8 @@ def main_micro():
     fix_errors = False
     debug = True
     num_workers = None
+    if not os.path.exists(os.path.join(CASES_PATH, "results")):
+        os.mkdir(os.path.join(CASES_PATH, "results")) 
     """
     if len(argv) > 1:
         opts, args = getopt.getopt(argv,"fdw:")

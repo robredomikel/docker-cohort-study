@@ -269,9 +269,9 @@ def cropProject(project_path, project_file, periodicity):
         minimum_periods = 3
 
     if project_shape[0] >= minimum_periods:  # Checks if the history of the project is more than 20 months.
-        initial_creation_year = minimum_periods-1  # Considering the index starting at 0
+        initial_creation_followup = minimum_periods-1  # Considering the index starting at 0
         # We consider the next follow-up observations
-        subset_df = project_df.iloc[initial_creation_year:initial_creation_year+minimum_periods,]
+        subset_df = project_df.iloc[initial_creation_followup+1:initial_creation_followup+minimum_periods+1,]
         operation_flag = True
         return operation_flag, subset_df
     else:
@@ -470,7 +470,7 @@ def get_subset_resulting_projects():
         github_project_path = github_prefix + path_format_name
         clean_list.append(github_project_path)
 
-    initial_project_dataset = pd.read_csv(os.path.join(CASES_PATH, "filtered_dataset.csv"))
+    initial_project_dataset = pd.read_csv(os.path.join(CASES_PATH, "filtered_dataset.csv"), delimiter=";")
     subset_df = initial_project_dataset[initial_project_dataset["URL"].isin(clean_list)]
 
     if not os.path.exists(os.path.join(CASES_PATH, "repos")):
