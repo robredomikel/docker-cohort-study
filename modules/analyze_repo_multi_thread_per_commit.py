@@ -399,7 +399,7 @@ def get_ms_usage_commits(project_name, start_date, end_date):
 
     output_list = []
     project_file = project_name + ".csv"
-    ms_usage_file_path = os.path.join(DATA_PATH, "commits", project_file)
+    ms_usage_file_path = os.path.join(CASES, "commits", project_file)
     file_df = pd.read_csv(ms_usage_file_path, delimiter=",")
     commit_list = file_df['sha'].tolist()
     datetime_list = file_df['date'].tolist()
