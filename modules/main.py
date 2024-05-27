@@ -1,9 +1,9 @@
 
 import pandas as pd
 from trendAnalysis import trendAnalysis
-from modules import projectCrawler, dateFilter, powerAnalysis, issueCrawler, get_subset_resulting_projects
+from modules import projectCrawler, dateFilter, powerAnalysis, issueCrawler, get_subset_resulting_projects, parse_analysis_files
 from commons import (COMPLETE_ANALYSIS, CASES_PATH, CONTROLS_PATH, CLONE_PROJECTS, POWER_ANALYSIS, REPO_ANALYSIS,
-                     FINAL_FILE_CREATION)
+                     FINAL_FILE_CREATION, MS_ANALYSIS)
 from clone_projects import cloneProjects
 from get_confounders import getConfounders
 from find_ms_usage import getMsUsage
@@ -210,6 +210,18 @@ def main():
         powerAnalysis()
         # Obtains the subset of controls needed to run the analysis
         # sampleControls()
+    
+    if MS_ANALYSIS:
+
+        # Check which case projects have an active MS usage (From the Microservices dataset)
+        
+        get_subset_resulting_projects()  # We get them from the resulting trend analysis
+        main_micro()
+        ms_files_path = os.path.join(CASES_PATH, 'results')
+        parse_analysis_files(ms_files_path=ms_files_path)
+        # getMsUsage()
+
+        print(f"> MS usage analysis stage performed")
 
     if CLONE_PROJECTS:
 
@@ -222,36 +234,25 @@ def main():
     # Collect all the necessary variables from the cloned repositories
     if REPO_ANALYSIS:
 
-        # Check which case projects have an active MS usage (From the Microservices dataset)
-        
-        # get_subset_resulting_projects()  # We get them from the resulting trend analysis
-        main_micro()
-        
-        # getMsUsage()
-
-        print(f"> MS usage analysis stage performed")
-
         # Collect confounders from the chosen projects
-        # getConfounders(project_list=os.listdir(os.path.join(CASES_PATH, "repositories")), project_type="cases")
-        # getConfounders(project_list=os.listdir(os.path.join(CONTROLS_PATH, "repositories")), project_type="controls")
+        getConfounders(project_list=os.listdir(os.path.join(CASES_PATH, "repositories")), project_type="cases")
+        getConfounders(project_list=os.listdir(os.path.join(CONTROLS_PATH, "repositories")), project_type="controls")
 
         print(f"> Confounders collection stage performed")
         # Crawl the issues from the final projects
         # Get eligible cases from the ms_usage
-        
-        #eligible_cases = os.listdir(os.path.join(CASES_PATH, "complete-results"))
-        #[issueCrawler(full_name=project_name, project_type="cases") for project_name in eligible_cases]
-        #eligible_controls = open(os.path.join(CONTROLS_PATH, "resulting_data/lm_resulting_pros_trimonthly.txt"), mode='r').read().splitlines()
-        #[issueCrawler(full_name=project_name, project_type="controls") for project_name in eligible_controls]
+        eligible_cases = os.listdir(os.path.join(CASES_PATH, "confounders_data"))
+        [issueCrawler(full_name=project_name, project_type="cases") for project_name in eligible_cases]
+        eligible_controls = open(os.path.join(CONTROLS_PATH, "resulting_data/lm_resulting_pros_trimonthly.txt"), mode='r').read().splitlines()
+        [issueCrawler(full_name=project_name, project_type="controls") for project_name in eligible_controls]
         
         print(f"> Issue collection stage performed")
 
         # Get velocity of the obtained projects.
-        
-        #cases_issues = os.path.join(CASES_PATH, "issue_history")
-        #velocityAnalysis(input_folder=cases_issues)
-        #controls_issues = os.path.join(CONTROLS_PATH, "issue_history")
-        #velocityAnalysis(input_folder=controls_issues)
+        cases_issues = os.path.join(CASES_PATH, "issue_history")
+        velocityAnalysis(input_folder=cases_issues)
+        controls_issues = os.path.join(CONTROLS_PATH, "issue_history")
+        velocityAnalysis(input_folder=controls_issues)
         
         print("> Velocity measuring stage performed")
 

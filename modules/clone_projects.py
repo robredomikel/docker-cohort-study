@@ -41,7 +41,7 @@ def cloneProjects(project_type):
 
     if project_type == "cases":
         repositories_path = path.join(CASES_PATH, "repositories")
-        repositories_list = path.join(CASES_PATH, "resulting_data/lm_resulting_pros_trimonthly.txt")
+        repositories_list = path.join(CASES_PATH, "ms_eligible_projects.txt")
     else:
         repositories_path = path.join(CONTROLS_PATH, "repositories")
         repositories_list = path.join(CONTROLS_PATH, "resulting_data/lm_resulting_pros_trimonthly.txt")

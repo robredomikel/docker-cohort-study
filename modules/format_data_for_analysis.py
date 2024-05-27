@@ -233,6 +233,7 @@ def checkLanguages(data):
         # Includes purely programming languages.
         languages = [lang for lang in df.Name.tolist() if lang.lower() in TIOBE_LIST]
 
+        prog_lang = None
         for i in range(len(df)):
             if df.Name[i] in languages:
                 prog_lang = df.Name[i]  # Most used language
@@ -243,6 +244,8 @@ def checkLanguages(data):
         # OLD FORMAT: df[df["Name"] == "Total"]["Code"].values[0]  # Total value of Code column
         n_languages.append(len(languages))
         if prog_lang == "Total":
+            programmming_language.append(None)
+        elif prog_lang == None:
             programmming_language.append(None)
         else:
             programmming_language.append(prog_lang)
@@ -319,6 +322,52 @@ def checkMissingValues(data_df):
     controls = 0
     missing_values_indices = []
 
+    print("> REPORT OF REJECTIONS BASED ON EACH CRITERIA:") 
+
+    # Check losses based on main language:
+    excluded_main_language = data_df.loc[data_df['main_language'].isnull()]
+    main_languages_loss_cases = len(excluded_main_language[excluded_main_language["MS/NonMS"] == "MS"])
+    main_languages_loss_controls = len(excluded_main_language[excluded_main_language["MS/NonMS"] == "~MS"])
+
+    print(f"# of cases with no valid main language: {main_languages_loss_cases} / from total cases: {data_df[data_df['MS/NonMS'] == 'MS']['MS/NonMS'].count()}")
+    print(f"# of controls with no valid main language: {main_languages_loss_controls} / from total controls: {data_df[data_df['MS/NonMS'] == '~MS']['MS/NonMS'].count()}")
+    print(f"Remaining CASES: {data_df[data_df['MS/NonMS'] == 'MS']['MS/NonMS'].count() - main_languages_loss_cases}")
+    print(f"Remaining CONTROLS: {data_df[data_df['MS/NonMS'] == '~MS']['MS/NonMS'].count() - main_languages_loss_controls}")
+    print("-------------------------------------")
+    # Check losses based on size:
+    non_excluded_main_language = data_df.loc[~(data_df['main_language'].isnull())]
+    excluded_size = non_excluded_main_language.loc[non_excluded_main_language["size"] == 0]
+    size_loss_cases = len(excluded_size[excluded_size["MS/NonMS"] == 'MS'])
+    size_loss_controls = len(excluded_size[excluded_size["MS/NonMS"] == "~MS"])
+
+    print(f"# of cases with size 0: {size_loss_cases} / from remaining cases: {non_excluded_main_language[non_excluded_main_language['MS/NonMS'] == 'MS']['MS/NonMS'].count()}")
+    print(f"# of controls with size 0: {size_loss_controls} / from remaining controls: {non_excluded_main_language[non_excluded_main_language['MS/NonMS'] == '~MS']['MS/NonMS'].count()}")
+    print(f"Remaining CASES: {non_excluded_main_language[non_excluded_main_language['MS/NonMS'] == 'MS']['MS/NonMS'].count() - size_loss_cases}")
+    print(f"Remaining CONTROLS: {non_excluded_main_language[non_excluded_main_language['MS/NonMS'] == '~MS']['MS/NonMS'].count() - size_loss_controls}")
+    print("-------------------------------------")
+
+    # Check losses based on velocity start:
+    non_excluded_size = non_excluded_main_language.loc[~(non_excluded_main_language["size"] == 0)]
+    excluded_velocity_start = non_excluded_size.loc[non_excluded_size["velocity_mean_start"].isnull()]
+    velocity_start_loss_cases = len(excluded_velocity_start[excluded_velocity_start["MS/NonMS"] == 'MS'])
+    velocity_start_loss_controls = len(excluded_velocity_start[excluded_velocity_start["MS/NonMS"] == "~MS"])
+    print(f"# of cases with NaN velocity start: {velocity_start_loss_cases} / from remaining cases: {non_excluded_size[non_excluded_size['MS/NonMS'] == 'MS']['MS/NonMS'].count()}")
+    print(f"# of controls with NaN velocity start: {velocity_start_loss_controls} / from remaining controls: {non_excluded_size[non_excluded_size['MS/NonMS'] == '~MS']['MS/NonMS'].count()}")
+    print(f"Remaining CASES: {non_excluded_size[non_excluded_size['MS/NonMS'] == 'MS']['MS/NonMS'].count() - velocity_start_loss_cases}")
+    print(f"Remaining CONTROLS: {non_excluded_size[non_excluded_size['MS/NonMS'] == '~MS']['MS/NonMS'].count() - velocity_start_loss_controls}")
+    print("-------------------------------------")
+    
+    # Check losses based on velocity end:
+    non_excluded_velocity_start = non_excluded_size.loc[~(non_excluded_size["velocity_mean_start"].isnull())]
+    excluded_velocity_end = non_excluded_velocity_start.loc[non_excluded_velocity_start["velocity_mean_end"].isnull()]
+    velocity_end_loss_cases = len(excluded_velocity_end[excluded_velocity_end["MS/NonMS"] == "MS"])
+    velocity_end_loss_controls = len(excluded_velocity_end[excluded_velocity_end["MS/NonMS"] == "~MS"])
+    print(f"# of cases with NaN velocity end: {velocity_end_loss_cases} / from remaining cases: {non_excluded_velocity_start[non_excluded_velocity_start['MS/NonMS'] == 'MS']['MS/NonMS'].count()}")
+    print(f"# of controls with NaN velocity end: {velocity_end_loss_controls} / from remaining controls: {non_excluded_velocity_start[non_excluded_velocity_start['MS/NonMS'] == '~MS']['MS/NonMS'].count()}")
+    print(f"Remaining CASES: {non_excluded_velocity_start[non_excluded_velocity_start['MS/NonMS'] == 'MS']['MS/NonMS'].count() - velocity_end_loss_cases}")
+    print(f"Remaining CONTROLS: {non_excluded_velocity_start[non_excluded_velocity_start['MS/NonMS'] == '~MS']['MS/NonMS'].count() - velocity_end_loss_controls}")
+    print("-------------------------------------")
+
     for pro_name in missing_values_pros:
         pro_index = data_df.index[data_df['full_name'] == pro_name]
         pro_type = data_df.iloc[pro_index, 3].values[0]  # Column number of "MS/NonMS"
@@ -329,6 +378,11 @@ def checkMissingValues(data_df):
             controls += 1
 
     df = data_df.drop(missing_values_indices)
+
+    # print("> MISSING VALUES STAGE ADDITIONAL CHECKS:")
+    # print(f"--Projects with size 0: {len(size_subset)}")
+    # print(f"--Projects with NaN as Main Language: {len(main_language_subset)}")
+    # print(f"--Rejected # of projects without getting the unique names: {len(all_names)}")
 
     return len(velocity_start_subset), len(velocity_end_subset), len(missing_values_pros), cases, controls, df
 
@@ -372,8 +426,8 @@ def merge_data():
     print(f"Number of projects for creation year: {len(features_dict['creation_year'])}")
     print(f"Number of projects for n of contributors: {len(features_dict['n_contributors'])}")
     print("-------------------------------------------------")
-    print(f"Number of missing observations in start velocity: {missing_vals_start}")
-    print(f"Number of missing observations in end velocity: {missing_vals_end}")
-    print(f"Number of affected projects: {pros_affected}")
-    print(f"Number of affected cases: {cases}")
-    print(f"Number of affected projects: {controls}")
+    # print(f"Number of missing observations in start velocity: {missing_vals_start}")
+    # print(f"Number of missing observations in end velocity: {missing_vals_end}")
+    # print(f"Number of affected projects: {pros_affected}")
+    # print(f"Number of affected cases: {cases}")
+    # print(f"Number of affected controls: {controls}")

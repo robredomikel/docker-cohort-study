@@ -14,6 +14,7 @@ import statsmodels.stats.power as smp
 import scipy.stats as stats
 import math
 import statistics
+import json
 
 
 def countdown(total):
@@ -251,7 +252,7 @@ def createSerialData(data_type, original_files, path, periodicity):
 
 def cropProject(project_path, project_file, periodicity):
     """
-    Crops projects data length to 2 years since the start of the project creation so that the trend is only analyzed during
+    Crops projects data length to 1 year since the start of the follow-up so that the trend is only analyzed during
     that time.
     project_file: csv file
     """
@@ -268,7 +269,7 @@ def cropProject(project_path, project_file, periodicity):
     else:
         minimum_periods = 3
 
-    if project_shape[0] >= minimum_periods:  # Checks if the history of the project is more than 20 months.
+    if project_shape[0] >= minimum_periods:  # Checks if the history of the project is more than X months.
         initial_creation_followup = minimum_periods-1  # Considering the index starting at 0
         # We consider the next follow-up observations
         subset_df = project_df.iloc[initial_creation_followup+1:initial_creation_followup+minimum_periods+1,]
@@ -476,3 +477,83 @@ def get_subset_resulting_projects():
     if not os.path.exists(os.path.join(CASES_PATH, "repos")):
         os.mkdir(os.path.join(CASES_PATH, "repos"))
     subset_df.to_csv(os.path.join(CASES_PATH, "repos", "selected_projects_repo_links.csv"), index=False)
+
+
+def output_json(output_dict):
+
+    # Serializing json
+    json_object = json.dumps(output_dict, indent=4)
+    
+    # Writing to sample.json
+    with open(CASES_PATH + "/ms_monitorization_json.json", "w") as outfile:
+        outfile.write(json_object)
+
+
+def store_positive_projects(projects_list):
+
+    file = open(os.path.join(CASES_PATH, "ms_eligible_projects.txt"),'w')
+    for positive_pro in projects_list:
+        
+        pro_name = positive_pro['name']
+        count_hash = pro_name.count('#')
+        if count_hash > 1:  # We need to remove the last # due to some issue in the ms analyzer.
+            last_hash_index =pro_name.rfind("#")
+            pro_name = pro_name[:last_hash_index]+"_"+pro_name[last_hash_index+1:]
+        
+        pro_name_csv = pro_name+".csv"
+        file.write(pro_name_csv+"\n")
+    file.close()
+
+
+def parse_analysis_files(ms_files_path):
+    """
+    
+    """
+
+    repos_with_empty_results = []  # It contains analysis files but no calculation of the microservices
+    repos_with_negative_results = []
+    empty_directory = []
+    ms_dir_files = os.listdir(ms_files_path)
+    output_dict = {"no_analysis_projects": [], "no_ms_projects": [], "negative_output_projects": [], "positive_output_projects": []}
+
+    for repo_count, directory in enumerate(ms_dir_files):
+        empty_results_count = 0
+        empty_results_files = []
+        negative_results_count = 0
+        negative_results_files = []
+        ms_files = os.listdir(os.path.join(ms_files_path, directory))
+
+        # Check if there was no analysis for the given project
+        if not ms_files:
+            empty_directory.append(directory)
+            continue
+
+        for count, file in enumerate(ms_files):
+
+            json_file = json.load(open(os.path.join(ms_files_path, directory, file)))
+            # Check if the json-file
+            if 'structure' in json_file:
+                if 'number_of_microservices' in json_file['structure']:
+                    if json_file['structure']['number_of_microservices'] < 2:
+                        negative_results_count += 1
+            else:
+                empty_results_count+=1
+
+        if empty_results_count > (len(ms_files) - empty_results_count):  # If there are more empty results than calculations...
+            repos_with_empty_results.append(directory)
+            output_dict["no_ms_projects"].append({"name": directory, "empty": empty_results_count, "non-empty": len(ms_files) - empty_results_count})
+        if negative_results_count > (len(ms_files) - negative_results_count - empty_results_count):  # If there are more negative results than positive ones...
+            repos_with_negative_results.append(directory)
+            output_dict["negative_output_projects"].append({"name": directory, "negative": negative_results_count, "non-negative": len(ms_files) - negative_results_count - empty_results_count})
+        else:
+            output_dict["positive_output_projects"].append({"name": directory, "positive": len(ms_files) - negative_results_count - empty_results_count, "non-positive": negative_results_count + empty_results_count})
+
+    print(f"--Total number of empty repos: {len(empty_directory)}")
+    print(f"--Total number of repositories with more empty results: {len(repos_with_empty_results)}")
+    print(f"--Total number of repositories with more negative results: {len(repos_with_negative_results)}")
+    
+    output_dict["no_analysis_projects"] = empty_directory
+    output_json(output_dict=output_dict)
+    
+    # Store positive output projects in the necessary format to process them later on
+    store_positive_projects(projects_list=output_dict["positive_output_projects"])
