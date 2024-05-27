@@ -136,6 +136,9 @@ def check_header_cases(df):
     # NOTE: Sorry for this spaghetti code if you are going over this function, but it was done in a moment of extreme lack
     # of time
 
+    # In order to keep the initial analysis order of language importance based on the analysis done
+    df['original_index'] = df.index
+
     # C Header
     if "C" in lang_names and "C Header" in lang_names:
         df['Name'] = df['Name'].replace({'C Header': 'C'})
@@ -178,6 +181,7 @@ def check_header_cases(df):
 
     grouped = df.groupby('Name')
     df = grouped.agg({
+        'original_index': 'min',
         'Bytes': 'sum',
         'CodeBytes': 'sum',
         'Lines': 'sum',
@@ -188,6 +192,8 @@ def check_header_cases(df):
         'Count': 'sum',
         'WeightedComplexity': 'sum',
     })
+
+    df.sort_values('original_index', inplace=True)
     df.reset_index(inplace=True)
     return df
 
@@ -231,12 +237,12 @@ def checkLanguages(data):
         df = check_header_cases(df=df)
 
         # Includes purely programming languages.
-        languages = [lang for lang in df.Name.tolist() if lang.lower() in TIOBE_LIST]
+        languages = {lang.lower() for lang in df["Name"] if lang.lower() in TIOBE_LIST}
 
         prog_lang = None
-        for i in range(len(df)):
-            if df.Name[i] in languages:
-                prog_lang = df.Name[i]  # Most used language
+        for lang in df["Name"]:
+            if lang.lower() in languages:
+                prog_lang = lang  # Most used language
                 break
 
         size = get_project_size(data=df)
