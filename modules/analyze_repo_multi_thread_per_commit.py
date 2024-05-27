@@ -699,8 +699,8 @@ def create_log_file():
 def main_micro():
 
     fix_errors = False
-    debug = True
-    num_workers = None
+    debug = False
+    num_workers = 1
     if not os.path.exists(os.path.join(CASES_PATH, "results")):
         os.mkdir(os.path.join(CASES_PATH, "results")) 
     """
