@@ -17,7 +17,7 @@ import nltk
 import pandas as pd
 from tqdm import tqdm
 import pydriller as pydrill
-
+[]
 # nltk.download('punkt')
 import string
 import subprocess
@@ -399,11 +399,9 @@ def get_ms_usage_commits(project_name, start_date, end_date):
 
     output_list = []
     project_file = project_name + ".csv"
-<<<<<<< HEAD
-    ms_usage_file_path = os.path.join(CASES, "commits", project_file)
-=======
+
     ms_usage_file_path = os.path.join(CASES_PATH, "commits", project_file)
->>>>>>> 643dc0b17f45db939c4472f4798fc9f5f71e60ab
+    ms_usage_file_path = os.path.join(CASES_PATH, "commits", project_file)
     file_df = pd.read_csv(ms_usage_file_path, delimiter=",")
     commit_list = file_df['sha'].tolist()
     datetime_list = file_df['date'].tolist()

@@ -171,5 +171,18 @@ wilcox.test(cases_endvelocity, controls_endvelocity, alternative = "less", conf.
 
 ################# CRUDE ANALYSIS: MATCHED DATA ####################
 
+# The df containing the data from the matching process is "matched_data_df"
+cases_matched_df <- matched_data_df[matched_data_df$MS.NonMS =='MS',] 
+cases_matched_endvelocity <- abs(cases_df$velocity_mean_end)
 
+controls_matched_df <- matched_data_df[matched_data_df$MS.NonMS =='~MS',]
+controls_matched_endvelocity <- abs(controls_df$velocity_mean_end)
 
+## Wilcoxon rank sum test (Non parametric) ~ two sample, hence MANN-WHITNEY
+wilcox.test(cases_matched_endvelocity, controls_matched_endvelocity, alternative = "two.sided", conf.int = T) # p-value = 0.5987 
+# Ho: Both distributions are equal (median difference is zero - two sided)
+# Ha: Both distributions are unequal (two-sided)
+
+wilcox.test(cases_matched_endvelocity, controls_matched_endvelocity, alternative = "less", conf.int = T) # p-value = 0.7013
+# Ho: The median of the first group is greater than the median of the second group (The time for projects to get issues closed is longer with MS pros than with Mono pros)
+# Ha: The median of the first group is less than the median of the second group. (The time for projects to get issues closed is shorter with MS pros than with Mono pros))

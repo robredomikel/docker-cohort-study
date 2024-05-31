@@ -188,6 +188,7 @@ discarded_rows <- setdiff(original_rows, matched_rows)
 # 4. Extract discarded rows from the original dataframe
 discarded_data <- raw_df[discarded_rows, ]
 non_discarded_data <- raw_df[matched_rows, ]
+matched_data_df <- non_discarded_data
 # Check the first few rows of the discarded data
 head(discarded_data)
 

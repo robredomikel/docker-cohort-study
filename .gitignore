@@ -5,6 +5,7 @@ myenv/
 .idea/
 consts/
 modules/__pycache__/
+*.json
 
 # Files not to be included
 *.ipynb

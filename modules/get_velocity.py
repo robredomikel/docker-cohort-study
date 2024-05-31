@@ -83,7 +83,7 @@ def velocityAnalysis(input_folder):
         df[CLOSED_COL] = pd.to_datetime(df[CLOSED_COL]).dt.tz_localize(None).dt.tz_localize('UTC')
 
         # Calculate time the issue was opened. Value is NaT if it's still open.
-        df["open_time"] = df[CLOSED_COL] - df[OPENED_COL]
+        df["open_time"] = df[CLOSED_COL] - df[OPENED_COL]  # In days
 
         # Since the projects are young projects and we don't require a fixed window for the velocity calculation, we
         # calculate the velocity calculation windows based on the creation date of the projects (first commit).
