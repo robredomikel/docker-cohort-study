@@ -125,14 +125,53 @@ shapiro.test(controls_endvelocity_boxcox)
 ## The LOG, SRQT & CUBE transformations provide reasonable transformations but further needs to be checked.
 # We will check if the CLT holds for the transformed populations.
 
+# NOTE: According to the CLT a population whose sample of n=30 is normally distributed, it will be approximately distributed.
+
 ###########################################
 # LOG TRANSFORMATION CLT
+cases_sample_log <- sample(cases_endvelocity_log, size = 30)
+controls_sample_log <- sample(controls_endvelocity_log, size = 30)
 
+normality_plot(cases_endvelocity_log, cases_sample_log, "Log pop cases", 
+               "log sample cases", "boxcox transformation")
+normality_plot(controls_endvelocity_log, controls_sample_log, "Log pop controls", 
+               "log sample controls", "boxcox transformation")
+
+# Normality test 
+shapiro.test(cases_sample_log) # p-value = 0.1566
+shapiro.test(controls_sample_log) # p-value = 0.9076
 
 
 ###########################################
 # SQUARE TRANSFORMATION
+cases_sample_sqrt <- sample(cases_endvelocity_sqrt, size = 30)
+controls_sample_sqrt <- sample(controls_endvelocity_sqrt, size = 30)
+
+normality_plot(cases_endvelocity_sqrt, cases_sample_sqrt, "sqrt pop cases", 
+               "sqrt sample cases", "sqrt transformation")
+normality_plot(controls_endvelocity_sqrt, controls_sample_sqrt, "Log pop controls", 
+               "sqrt sample controls", "sqrt transformation")
+
+# Normality test 
+shapiro.test(cases_sample_sqrt) # p-value = 0.0007245
+shapiro.test(controls_sample_sqrt) # p-value = 0.0007245
 
 ###########################################
 # CUBE ROOT TRANSFORMATION
+
+cases_sample_cube <- sample(cases_endvelocity_cube, size = 30)
+controls_sample_cube <- sample(controls_endvelocity_cube, size = 30)
+
+normality_plot(cases_endvelocity_cube, cases_sample_cube, "cube pop cases", 
+               "cube sample cases", "cube transformation")
+normality_plot(controls_endvelocity_cube, controls_sample_cube, "Log pop controls", 
+               "cube sample controls", "cube transformation")
+
+
+# Normality test 
+shapiro.test(cases_sample_cube) # p-value = 0.3315
+shapiro.test(controls_sample_cube) # p-value = 0.5641
+
+
+#### CONCLUSION: The Log and Cube transformations present potential options for running the parametric tests.
 
