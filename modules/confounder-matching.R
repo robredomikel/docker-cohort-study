@@ -1,5 +1,7 @@
 library(TOSTER)
-
+library(MatchIt)
+library(optmatch)
+library(Matching) 
 
 ############################################
 # MATCHED DATA
@@ -262,20 +264,8 @@ for (i in seq_along(confounders)){
 
 # NOTES:
 
-# ON SMD: The impact in terms of the Cohen's D estimate shows that in most of the cases (except # of issues)
+# ON SMD: The impact in terms of the Cohen's D estimate shows that in most of the cases (except # of issues & size)
 #         the mean number of the confounder has a standard deviation lower for MS than the mean value for ~MS 
-
-#.            Variable        D p_value
-#1 velocity_mean_start 0.101540  0.7515
-#2                size 0.138760  0.3616
-#3         n_languages 0.065125  0.9919
-#4       creation_year 0.098086  0.7881
-#5           n_commits 0.145930  0.3026
-#6            n_issues 0.138760  0.3616
-#7      n_contributors 0.119090  0.5568
-
-# ON KS-TEST: None of the tests provided a significant p-value therefore we fail to reject the null hypothesis,
-#             this in turn means that there is no significant difference between the distribution of the two samples.
 
 #.            Variable    Estimate        SE   Lower_CI   Upper_CI Conf_Level
 #1 velocity_mean_start -0.26261520 0.1721281 -0.5965534 0.07265977       0.95
@@ -285,6 +275,18 @@ for (i in seq_along(confounders)){
 #5           n_commits -0.07545033 0.1398714 -0.3476618 0.19692860       0.95
 #6            n_issues  0.02181209 0.1553502 -0.2803865 0.32394110       0.95
 #7      n_contributors -0.17831610 0.1653184 -0.4993677 0.14348910       0.95
+
+# ON KS-TEST: None of the tests provided a significant p-value therefore we fail to reject the null hypothesis,
+#             this in turn means that there is no significant difference between the distribution of the two samples.
+
+#.            Variable        D p_value
+#1 velocity_mean_start 0.101540  0.7515
+#2                size 0.138760  0.3616
+#3         n_languages 0.065125  0.9919
+#4       creation_year 0.098086  0.7881
+#5           n_commits 0.145930  0.3026
+#6            n_issues 0.138760  0.3616
+#7      n_contributors 0.119090  0.5568
 
 #### Graphically
 

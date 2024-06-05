@@ -78,13 +78,3 @@ plots <- lapply(unique(df_long$Variable), function(var) {
 do.call(grid.arrange, c(plots, ncol = 4, nrow = 2))
 
 
-
-########################################
-# considering caegorical outcome
-########################################
-
-logistic_model <- glm(factor(non_discarded_data_optimal$velocity_bool_end) ~ velocity_mean_start+factor(MS.NonMS)+size+factor(main_language)+
-                        n_languages+factor(creation_year)+n_commits+n_issues+n_contributors, family=binomial(link='logit'), data = data_m.optimal_1)
-summary(logistic_model)
-
-best_model <- step(logistic_model)

@@ -1,0 +1,142 @@
+---
+title: "Matching stage of the analysis"
+output: html_notebook
+---
+
+Matching analysis based on material found on internet, specially with modified codes from:
+https://www.practicalpropensityscore.com
+
+
+
+We first get the data for our study 
+
+```{r}
+
+raw_df <- read.csv('/Users/mrobredo23/OULU/docker_cohort-24/data/final_data_file.csv')
+raw_df <- subset(raw_df, select = -c(trimmed_languages))
+head(raw_df)
+df <- raw_df[c(2:ncol(raw_df))] # For the modelling purposes
+```
+
+We change the categorical values into numerical factors
+
+```{r}
+df$MS.NonMS <- ifelse(df$MS.NonMS=="MS",1,0)
+df$main_language <- as.factor(df$main_language)
+df$creation_year <- as.factor(df$creation_year)
+
+head(df) # Cases = 1, controls = 0
+```
+
+# PROPENSITY SCORE ESTIMATION
+```{r}
+covariate_names <- colnames(df[c(2, 4:ncol(df))])
+
+#obtain the propensity score formula   
+ps_formula <- paste(covariate_names, collapse="+")
+ps_formula <- formula(paste("MS.NonMS~",ps_formula, sep=""))
+print(ps_formula)
+```
+
+PS calculated through Logistic Regression
+
+```{r}
+ps_model <- glm(ps_formula, df, family=binomial())
+print(summary(ps_model))
+df$logitPScores <- log(fitted(ps_model)/(1-fitted(ps_model)))
+```
+
+PS calculated through Random Forests
+- The number of trees: The state-of-the-art suggests that the number of variables to be considered in each
+tree should be the sqrt(num_variables)
+```{r}
+library(party)
+set.seed(2024)
+my_controls <- cforest_unbiased(ntree=10000, mtry=3) # sqrt(8) = 2.8  
+mycforest <- cforest(ps_formula, data=df, controls=my_controls)
+
+#obtain a list of predicted probabilities
+predictedProbabilities <- predict(mycforest, type="prob")
+
+#organize the list into a matrix 
+pScores2 <- matrix(unlist(predictedProbabilities),,1,byrow=T)[,1]
+
+#convert propensity scores to logit
+df$logitPScoresRF <- log(pScores2/(1-pScores2))
+
+hist(df$logitPScores[df$MS.NonMS==0], density = 10, angle = 45, main="Propensity Scores Logit",
+     xlab="Shaded = Untreated | Gray = Treated") 
+hist(df$logitPScores[df$MS.NonMS==1], col=gray(0.4,0.25), add=T) 
+
+library(lattice)
+bwplot( logitPScores~MS.NonMS, data = df, 
+        ylab = "Propensity Scores Logit", auto.key = TRUE)
+bwplot( logitPScoresRF~MS.NonMS, data = df, 
+        ylab = "Propensity Scores RF", auto.key = TRUE)
+ 
+#obtain descriptive statistics for logistic regression
+summary(df$logitPScores[df$MS.NonMS==1])
+summary(df$logitPScores[df$MS.NonMS==0])
+
+#obtain descriptive statistics for RF
+summary(df$logitPScoresRF[df$MS.NonMS==1])
+summary(df$logitPScoresRF[df$MS.NonMS==0])
+
+```
+
+Estimate propensity scores with generalized boosted modeling (GBM)
+
+- Number of trees is defined as based on the state-of-the-art, most likely we may not need that amount to reach rhe maxima.
+- The interction depth follows the same logic of variable interaction as with the random forest
+- Stoping criteria: Looking for covariate balance, we look for maximum effect size of the of the matches, defore minimizing the difference between means across treatment and control observations. 
+- estimand: We are estimating the ATT (for the average treatment effect of the treated)
+
+```{r}
+library(twang)
+set.seed(2015)
+
+myGBM <- ps(ps_formula, data = df, n.trees=10000, interaction.depth=4,
+            shrinkage=0.01, stop.method=c("es.max"), estimand = "ATT", 
+            verbose=TRUE)
+print(summary(myGBM))
+plot(myGBM,type="b", color=F, lwd=2)
+
+#extract estimated propensity scores from object
+pScoresGBM <- myGBM$ps
+names(pScoresGBM) = "pScoresGBM"
+df$pScoresGBM <- unlist(pScoresGBM)
+write.csv(df, '/Users/mrobredo23/OULU/docker_cohort-24/data/data_with_pScores.csv', row.names = F)
+```
+
+Obtain summary statistics of common support for propensity scores estimated with the first imputed dataset
+
+```{r}
+#create a table
+tableCommonSupport = rbind(
+  summary(df[df$MS.NonMS==1,c(ncol(df)-2, ncol(df)-1, ncol(df))]),
+  summary(df[df$MS.NonMS==0,c(ncol(df)-2, ncol(df)-1, ncol(df))]))
+rownames(tableCommonSupport) = c(rep("Treated",6),rep("Control",6))
+
+# write.csv(tableCommonSupport, file="Table_common_support.csv")   
+
+#obtain proportion of treated cases above maximum control cases 
+#and proportion of control cases below minum treated cases
+#for logistic regression
+with(df, 100*c(
+  mean(as.numeric(df$logitPScores[df$MS.NonMS==1] > max(df$logitPScores[df$MS.NonMS==0]))),
+  mean(as.numeric(df$logitPScores[df$MS.NonMS==0] < min(df$logitPScores[df$MS.NonMS==1])))))
+
+#obtain proportions of treated cases above maximum control cases
+percentageAbove = with(df, 100*c(
+  mean(as.numeric(df$logitPScores[df$MS.NonMS==1] > max(df$logitPScores[df$MS.NonMS==0]))),
+  mean(as.numeric(df$logitPScoresRF[df$MS.NonMS==1] > max(df$logitPScoresRF[df$MS.NonMS==0]))),
+  mean(as.numeric(df$pScoresGBM[df$MS.NonMS==1,] > max(df$pScoresGBM[df$MS.NonMS==0,])))))
+
+#obtain proportions of control cases below minimum treated cases
+percentageBelow = with(df, 100*c(
+  mean(as.numeric(df$logitPScores[df$MS.NonMS==0] < min(df$logitPScores[df$MS.NonMS==1]))),
+  mean(as.numeric(df$logitPScoresRF[df$MS.NonMS==0] < min(df$logitPScoresRF[df$MS.NonMS==1]))),
+  mean(as.numeric(df$pScoresGBM[df$MS.NonMS==0,] < min(df$pScoresGBM[df$MS.NonMS==1,])))))
+
+```
+
