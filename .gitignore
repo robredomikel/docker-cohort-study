@@ -6,9 +6,12 @@ myenv/
 consts/
 modules/__pycache__/
 *.json
+*.RData
+*.Rhistory
 
 # Files not to be included
 *.ipynb
 *.Rproj
 .DS_Store
 .Rproj.user
+modules/weighted-matching.nb.html
