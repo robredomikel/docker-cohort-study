@@ -36,10 +36,13 @@ qq_plot <- function(data, covariate_name, group_column) {
 raw_df <- read.csv('/Users/mrobredo23/OULU/docker_cohort-24/data/final_data_file.csv')
 View(raw_df)
 raw_df <- subset(raw_df, select = -c(trimmed_languages))
+raw_df$velocity_mean_end <- raw_df$velocity_mean_end + 0.01
+raw_df$velocity_mean_start <- raw_df$velocity_mean_start + 0.01
 df <- raw_df[c(2:ncol(raw_df))] # For the modelling purposes
 View(df)
 df$main_language <- as.numeric(as.factor(df$main_language))
 df$creation_year <- as.numeric(as.factor(df$creation_year))
+df$MS.NonMS <- as.numeric(as.factor(df$MS.NonMS))
 
 plot(df$velocity_mean_end, df$velocity_mean_start)
 
@@ -62,13 +65,16 @@ hist(controls_endvelocity, col = "gray63", main='CONTROLS')
 # Definitely non-normal
 
 # Through interquantile plots
-qqnorm(cases_endvelocity, main='CASES', col='blue')
+qqnorm(cases_endvelocity, main='CASES', col='red')
 qqline(cases_endvelocity)
 
-qqnorm(controls_endvelocity, main='CONTROLS', col='blue')
+qqnorm(controls_endvelocity, main='CONTROLS', col='red')
 qqline(controls_endvelocity)
 par(mfrow=c(1,1))
 # Definitely non-normal
+
+normality_plot(cases_endvelocity, controls_endvelocity, "MS projects", 
+               "~MS projects", "~MS projects")
 
 # Through Shapiro-Wilk test: (Given our small sample sizes... it matches the case scenario)
 shapiro.test(cases_endvelocity) # For cases
@@ -186,3 +192,14 @@ wilcox.test(cases_matched_endvelocity, controls_matched_endvelocity, alternative
 wilcox.test(cases_matched_endvelocity, controls_matched_endvelocity, alternative = "less", conf.int = T) # p-value = 0.7013
 # Ho: The median of the first group is greater than the median of the second group (The time for projects to get issues closed is longer with MS pros than with Mono pros)
 # Ha: The median of the first group is less than the median of the second group. (The time for projects to get issues closed is shorter with MS pros than with Mono pros))
+
+
+#####################################################################
+
+################# CRUDE ANALYSIS: TRANSFORMED DATA ####################
+
+# Assuming different variance (Welch's t-test)
+t.test(cases_endvelocity_cube, controls_endvelocity_cube, var.equal = FALSE)
+# Trying the left sided sample t-test
+t.test(cases_endvelocity_cube, controls_endvelocity_cube, var.equal = FALSE, alternative = 'two.sided')
+t.test(cases_endvelocity_cube, controls_endvelocity_cube, var.equal = FALSE, alternative = 'less')

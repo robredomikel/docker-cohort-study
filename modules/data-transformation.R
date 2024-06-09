@@ -18,20 +18,25 @@ controls_endvelocity <- abs(controls_df$velocity_mean_end)
 normality_plot <- function(group1, group2, name1, name2, trans_technique) {
   
   par(mfrow=c(2,2))
-  hist(group1, main=paste(name1), freq=F)
-  lines(density(group1), col="red")
-  hist(group2, main=paste(name2), freq=F)
-  lines(density(group2), col="red")
+  hist(group1, main=paste(name1), breaks=40, ylim = c(0, max(density(group1)$y)), freq=F,
+       cex.main=1.7, cex.lab=1.5, cex.axis=1.5, xlab="End velocity mean")
+  lines(density(group1), col="red", lwd=2)
+  hist(group2, main=paste(name2), breaks=40, ylim = c(0, max(density(group2)$y)), freq=F,
+       cex.main=1.7, cex.lab=1.5, cex.axis=1.5, xlab="End velocity mean")
+  lines(density(group2), col="red", lwd=2)
   
   group2[is.infinite(group2)] <- NA
   group2 <- na.omit(group2)
   
-  qqnorm(group1, main=paste(name1), col='blue')
+  qqnorm(group1, main=paste(name1, "QQ plot"), col='blue',
+         cex.main=1.7, cex.lab=1.5, cex.axis=1.5)
   qqline(group1)
-  qqnorm(group2, main=paste(trans_technique), col='blue')
+  qqnorm(group2, main=paste(trans_technique, "QQ plot"), col='blue',
+         cex.main=1.7, cex.lab=1.5, cex.axis=1.5)
   qqline(group2)
   par(mfrow=c(1,1))
   }
+
 
 ###########################################
 # LOG TRANSFORMATION
