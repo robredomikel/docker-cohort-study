@@ -3,14 +3,52 @@ library(MatchIt)
 library(optmatch)
 library(Matching) 
 
+
+# MODIFICATION OF df FOR VARIABLE NAMES IN VISUALIZATIONS
+df_renamed <- df %>% rename(
+  `# Commits` = n_commits,
+  `# Developers`= n_contributors,
+  `# Issues`= n_issues,
+  `# Programming languages`= n_languages, 
+  `Size of the project`= size, 
+  `Start Velocity`= velocity_mean_start,
+  `End Velocity`= velocity_mean_end,
+  `MS/Non-MS`= MS.NonMS,
+  `Development language`= main_language,
+  `Creation Year`= creation_year
+)
+
+
 ############################################
 # MATCHED DATA
 
+# OPTION WITH BASE R from rejected paper
+# Necessary BOXPLOTs for confounders with nonSQ and SQ
+# par(mfrow=c(2,3), mar=c(6,1,6,1), oma=c(0.5,1,0.5,1))
+par(mfrow=c(2,3), mar=c(3,1,3,1), oma=c(1,1,1,1))
+par(mfrow=c(2,3))
+boxplot(n_commits ~ MS.NonMS, horizontal = T, data = df, main= '# commits', xlab = '',
+        ylab = '', col = c('lavenderblush3', 'lightcyan4'), boxwex = 0.90, cex.main=2.5, cex.axis=2, outcex=1.5, lwd=1.5, yaxt= "n")
+boxplot(n_contributors ~ MS.NonMS, horizontal = T, data = df, main= '# developers',
+        xlab = '', ylab = '', col = c('lavenderblush3', 'lightcyan4'), boxwex = 0.90, cex.main=2.5, cex.axis=2, cex.lab = 2, outcex=1.5, lwd=1.5, yaxt= "n")
+boxplot(n_issues ~ MS.NonMS, horizontal = T, data = df, main= '# issues',
+        xlab = '', ylab = '', col = c('lavenderblush3', 'lightcyan4'), boxwex = 0.90, cex.main=2.5, cex.axis=2, cex.lab = 2, outcex=1.5, lwd=1.5,yaxt= "n")
+boxplot(n_languages ~ MS.NonMS, horizontal = T, data = df, main= '# programming languages',
+        xlab = '', ylab = '', col = c('lavenderblush3', 'lightcyan4'), boxwex = 0.90, cex.main=2.5, cex.axis=2, cex.lab = 2, outcex=1.5, lwd=1.5,yaxt= "n")
+boxplot(size ~ MS.NonMS, horizontal = T, data = df, main= 'Project size',
+        xlab = '', ylab = '', col = c('lavenderblush3', 'lightcyan4'), boxwex = 0.90, cex.main=2.5, cex.axis=2, cex.lab = 2, outcex=1.5, lwd=1.5, yaxt= "n")
+boxplot(velocity_mean_start ~ MS.NonMS, horizontal = T, data = df, main= "Start velocity",
+        xlab = '', ylab = '', col = c('lavenderblush3', 'lightcyan4'), boxwex = 0.90, cex.main=2.5, cex.axis=2, cex.lab = 2, outcex=1.5, lwd=1.5, yaxt= "n")
+
+# OPTION WITH GGPLOT2
 # Observational boxplots of the groups.
-data_long <- pivot_longer(df, cols = c(velocity_mean_end, velocity_mean_start, size, n_languages, n_commits:n_contributors), names_to = "Covariate", values_to = "Value")
+data_long <- pivot_longer(df_renamed, cols = c(`Start Velocity`, `Size of the project`, `# Programming languages`, 
+                                       `# Commits`, `# Issues`, `# Developers`), 
+                          names_to = "Covariate", values_to = "Value", names_repair = name_reshape(names))
 
 bp1 <- ggplot(data_long, aes(x = Covariate, y = Value, fill = MS.NonMS)) +
   geom_boxplot() + # Draw boxplots
+  coord_flip() + # Make the boxplots horizontal
   theme(axis.text.x = element_blank(), # Hide x-axis text labels
         axis.ticks.x = element_blank() # Optionally hide x-axis ticks as well
   ) + # Rotate x-axis labels for clarity. # axis.text.x = element_text(angle = 45, hjust = 1)
@@ -46,7 +84,7 @@ df_creation <- df %>%
 barp2 <- ggplot(df_creation, aes(x = creation_year, y = Count, fill = as.factor(MS.NonMS))) +
   geom_bar(stat = "identity", position = position_dodge(width = 0.7), width = 0.6) +
   labs(title = "Distribution of Categories by Creation Year",
-       x = "Programming Language",
+       x = "Creation Year",
        y = "Count",
        fill = "Category") +
   theme_minimal()
@@ -246,22 +284,27 @@ histo_plot
 
 # NOTE: Perhaps match additionally based on # of languages?
 
-######### Matching Quality assessment #########
+######################################################################################
+######################################################################################
+######################################################################################
+
+######### Matching Quality assessment (EXACT MATCHING) #########
 
 #### Numerically
 
 # STANDARDIZED MEAN DIFFERENCES & KS TWO SAMPLE TEST
 
-confounders <- c("velocity_mean_start", "size", "n_languages", "creation_year", "n_commits", "n_issues", "n_contributors")
+confounders <- c("velocity_mean_start", "main_language", "size", "n_languages", "creation_year", "n_commits", "n_issues", "n_contributors")
 smd_results <- list()
 ks_results <- list()
 
 for (i in seq_along(confounders)){
   
   formula <- as.formula(paste(confounders[i], "~ MS.NonMS"))
-  result <- smd_calc(formula = formula, data=non_discarded_data, paired = F,
+  result <- smd_calc(formula = formula, data=data.exactMatching, paired = F,
                      smd_ci = c("nct"), bias_correction = F)
-  test_result <- ks.test(formula=formula, data=non_discarded_data)
+  # The data comes from the matching process performed in the weighting-matching stage in the R notebook
+  test_result <- ks.test(formula=formula, data=data.exactMatching)
   
   smd_results[[confounders[i]]] <- result
   ks_results[[confounders[i]]] <- test_result
@@ -297,7 +340,7 @@ for (i in seq_along(confounders)){
 #### Graphically
 
 header_names <- c("MS.NonMS", "velocity_mean_start", "size", "n_languages", "n_commits", "n_issues", "n_contributors")
-cont_subset_df <- subset(df, select = header_names)
+cont_subset_df <- subset(data.exactMatching, select = header_names)
 
 # Kernel density distribution
 par(mfrow=c(2, 3)) 
@@ -305,8 +348,8 @@ par(mfrow=c(2, 3))
 for (i in seq(from=2, to=length(header_names))){
   
   
-  cases <- cont_subset_df[,header_names[i]][cont_subset_df[,header_names[1]] == "MS"]
-  controls <- cont_subset_df[,header_names[i]][cont_subset_df[,header_names[1]] == "~MS"] 
+  cases <- cont_subset_df[,header_names[i]][cont_subset_df[,header_names[1]] == 2] # MS
+  controls <- cont_subset_df[,header_names[i]][cont_subset_df[,header_names[1]] == 1] # ~MS
   cases_density <- density(cases)
   controls_density <- density(controls)
   max_density <- max(c(cases_density$y, controls_density$y))
@@ -330,8 +373,8 @@ par(mfrow=c(2, 3))
 # header_names[2:length(header_names)]
 for (i in seq(from=2, to=length(header_names))){
   
-  cases <- cont_subset_df[,header_names[i]][cont_subset_df[,header_names[1]] == "MS"]
-  controls <- cont_subset_df[,header_names[i]][cont_subset_df[,header_names[1]] == "~MS"] 
+  cases <- cont_subset_df[,header_names[i]][cont_subset_df[,header_names[1]] == 2] # MS
+  controls <- cont_subset_df[,header_names[i]][cont_subset_df[,header_names[1]] == 1] #~MS 
   cases_cdf <- ecdf(cases)
   controls_cdf <- ecdf(controls)
   xlim <- range(cont_subset_df[, header_names[i]])
@@ -345,13 +388,207 @@ for (i in seq(from=2, to=length(header_names))){
 
 par(mfrow=c(1, 1))
 
+# Paired BARPLOT for the main_language confounder in case we get matching
+# Count the occurrences
+df_language <- data.exactMatching %>%
+  group_by(main_language, MS.NonMS) %>%
+  summarise(Count = n(), .groups = 'drop')
+
+barp1 <- ggplot(df_language, aes(x = main_language, y = Count, fill = as.factor(MS.NonMS))) +
+  geom_bar(stat = "identity", position = position_dodge(width = 0.7), width = 0.6) +
+  labs(title = "Distribution of Categories by Language",
+       x = "Programming Language",
+       y = "Count",
+       fill = "Category") +
+  theme_minimal()
+barp1 + scale_fill_manual(values = c("dodgerblue4", "gray63"))
+
+# Same based on creation year
+df_creation <- data.exactMatching %>%
+  group_by(creation_year, MS.NonMS) %>%
+  summarise(Count = n(), .groups = 'drop')
+
+barp2 <- ggplot(df_creation, aes(x = creation_year, y = Count, fill = as.factor(MS.NonMS))) +
+  geom_bar(stat = "identity", position = position_dodge(width = 0.7), width = 0.6) +
+  labs(title = "Distribution of Categories by Creation Year",
+       x = "Programming Language",
+       y = "Count",
+       fill = "Category") +
+  theme_minimal()
+barp2 + scale_fill_manual(values = c("dodgerblue4", "gray63"))
+
+# Same based on number of languages
+df_numlang <- data.exactMatching %>%
+  group_by(n_languages, MS.NonMS) %>%
+  summarise(Count = n(), .groups = 'drop')
+
+# N_languages
+histo_plot <- ggplot(df_numlang, aes(x = n_languages, y= Count, fill = as.factor(MS.NonMS))) +
+  geom_bar(stat = "identity", position = position_dodge(width = 0.7), width = 0.7) +  # Automatically counts; no 'y' aesthetic needed
+  labs(title = "Distribution of Categories by # of languages",
+       x = "# of languages",
+       y = "Count",
+       fill = "Category") +
+  theme_minimal() +
+  scale_fill_manual(values = c("dodgerblue4", "gray63"))
+histo_plot
+
 
 ######################################################################################
 ######################################################################################
 ######################################################################################
 
+######### Matching Quality assessment (full optimal matching) #########
 
-################# ################# ################# ################# 
+#### Numerically
+
+# STANDARDIZED MEAN DIFFERENCES & KS TWO SAMPLE TEST
+
+confounders <- c("velocity_mean_start", "main_language", "size", "n_languages", "creation_year", "n_commits", "n_issues", "n_contributors")
+smd_results <- list()
+ks_results <- list()
+
+for (i in seq_along(confounders)){
+  
+  formula <- as.formula(paste(confounders[i], "~ MS.NonMS"))
+  result <- smd_calc(formula = formula, data=data.fullMatching , paired = F,
+                     smd_ci = c("nct"), bias_correction = F)
+  # The data comes from the matching process performed in the weighting-matching stage in the R notebook
+  test_result <- ks.test(formula=formula, data=data.fullMatching )
+  
+  smd_results[[confounders[i]]] <- result
+  ks_results[[confounders[i]]] <- test_result
+  
+}
+
+# NOTES:
+
+# SMD (Cohen's D)
+#                          estimate        SE   lower.ci   upper.ci conf.level
+# velocity_mean_start   -0.2512653 0.1698625 -0.5808954 0.07960394       0.95
+# main_language.         0.2449892 0.150642 -0.0484602 0.5377505       0.95
+# size                   0.07136731 0.1412351 -0.2036376 0.3462091       0.95 
+# n_languages.           -0.1549179 0.1619849 -0.4696147 0.1603927       0.95
+# creation_year.         -0.2289281 0.1546348 -0.5293833 0.07224687       0.95
+# n_commits              -0.07089686 0.1382338 -0.3399512 0.1983108       0.95
+# n_issues                0.02508334 0.1533155 -0.2732012 0.3232903       0.95
+# n_contrbutors           -0.1721107 0.1637694 -0.4902063 0.1467031       0.95
+
+# ON KS-TEST: None of the tests provided a significant p-value therefore we fail to reject the null hypothesis,
+#             this in turn means that there is no significant difference between the distribution of the two samples.
+
+#.            Variable        
+# velocity_mean_start D = 0.10312, p-value = 0.7211
+# main_language.      D = 0.13068, p-value = 0.4215
+# size                D = 0.14193, p-value = 0.321
+# n_languages.        D = 0.056305, p-value = 0.9988
+# creation_year.      D = 0.1067, p-value = 0.6808
+# n_commits           D = 0.13568, p-value = 0.3747
+# n_issues            D = 0.1341, p-value = 0.3891
+# n_contrbutors       D = 0.11553, p-value = 0.581
+
+
+#### Graphically
+
+header_names <- c("MS.NonMS", "velocity_mean_start", "size", "n_languages", "n_commits", "n_issues", "n_contributors")
+cont_subset_df <- subset(data.fullMatching, select = header_names)
+
+# Kernel density distribution
+par(mfrow=c(2, 3)) 
+# header_names[2:length(header_names)]
+for (i in seq(from=2, to=length(header_names))){
+  
+  
+  cases <- cont_subset_df[,header_names[i]][cont_subset_df[,header_names[1]] == 2] # MS
+  controls <- cont_subset_df[,header_names[i]][cont_subset_df[,header_names[1]] == 1] # ~MS
+  cases_density <- density(cases)
+  controls_density <- density(controls)
+  max_density <- max(c(cases_density$y, controls_density$y))
+  
+  hist(controls, freq = F, main = paste('Histogram of', header_names[i]),
+       ylab="Kernel density", col = rgb(0.062745, 0.305882, 0.545098, 0.5), 
+       xlab = header_names[i], probability = T,  xlim=range(cont_subset_df[i]),
+       ylim = c(0, max_density * 1.1))
+  lines(density(controls), col = "dodgerblue4", lwd=2)
+  
+  hist(cases, freq = F, col = rgb(1.000000, 0.549020, 0.000000, 0.5), probability = T, add=T)
+  lines(density(cases), col = "darkorange", lwd=2)
+  
+  legend("topright", legend = c("~MS", "MS"), fill = c(rgb(0.062745, 0.305882, 0.545098, 0.5), rgb(1.000000, 0.549020, 0.000000, 0.5)))
+}
+
+par(mfrow=c(1, 1))
+
+# Cumulative distribution function
+par(mfrow=c(2, 3)) 
+# header_names[2:length(header_names)]
+for (i in seq(from=2, to=length(header_names))){
+  
+  cases <- cont_subset_df[,header_names[i]][cont_subset_df[,header_names[1]] == 2] # MS
+  controls <- cont_subset_df[,header_names[i]][cont_subset_df[,header_names[1]] == 1] #~MS 
+  cases_cdf <- ecdf(cases)
+  controls_cdf <- ecdf(controls)
+  xlim <- range(cont_subset_df[, header_names[i]])
+  
+  plot(controls_cdf, main = paste('CDF of', header_names[i]), xlab = header_names[i], ylab = 'Cumulative Probability', 
+       col = rgb(1.000000, 0.549020, 0.000000, 0.5), xlim = xlim, verticals = TRUE, do.points = FALSE, lwd=2)
+  lines(cases_cdf, col = rgb(0.062745, 0.305882, 0.545098, 0.5), verticals = TRUE, do.points = FALSE, lwd=2)
+  # Add legend
+  legend("bottomright", legend = c("~MS", "MS"), col = c(rgb(0.062745, 0.305882, 0.545098, 0.5), rgb(1.000000, 0.549020, 0.000000, 0.5)), lty = 1)
+}
+
+par(mfrow=c(1, 1))
+
+# Categorical variables
+# Paired BARPLOT for the main_language confounder in case we get matching
+# Count the occurrences
+df_language <- data.fullMatching %>%
+  group_by(main_language, MS.NonMS) %>%
+  summarise(Count = n(), .groups = 'drop')
+
+barp1 <- ggplot(df_language, aes(x = main_language, y = Count, fill = as.factor(MS.NonMS))) +
+  geom_bar(stat = "identity", position = position_dodge(width = 0.7), width = 0.6) +
+  labs(title = "Distribution of Categories by Language",
+       x = "Programming Language",
+       y = "Count",
+       fill = "Category") +
+  theme_minimal()
+barp1 + scale_fill_manual(values = c("dodgerblue4", "gray63"))
+
+# Same based on creation year
+df_creation <- data.fullMatching %>%
+  group_by(creation_year, MS.NonMS) %>%
+  summarise(Count = n(), .groups = 'drop')
+
+barp2 <- ggplot(df_creation, aes(x = creation_year, y = Count, fill = as.factor(MS.NonMS))) +
+  geom_bar(stat = "identity", position = position_dodge(width = 0.7), width = 0.6) +
+  labs(title = "Distribution of Categories by Creation Year",
+       x = "Programming Language",
+       y = "Count",
+       fill = "Category") +
+  theme_minimal()
+barp2 + scale_fill_manual(values = c("dodgerblue4", "gray63"))
+
+# Same based on number of languages
+df_numlang <- data.fullMatching %>%
+  group_by(n_languages, MS.NonMS) %>%
+  summarise(Count = n(), .groups = 'drop')
+
+# N_languages
+histo_plot <- ggplot(df_numlang, aes(x = n_languages, y= Count, fill = as.factor(MS.NonMS))) +
+  geom_bar(stat = "identity", position = position_dodge(width = 0.7), width = 0.7) +  # Automatically counts; no 'y' aesthetic needed
+  labs(title = "Distribution of Categories by # of languages",
+       x = "# of languages",
+       y = "Count",
+       fill = "Category") +
+  theme_minimal() +
+  scale_fill_manual(values = c("dodgerblue4", "gray63"))
+histo_plot
+
+#################################################################### 
+#################################################################### 
+#################################################################### 
+
 
 ################# Optimal Matching
 
@@ -433,4 +670,5 @@ ggplot(data_long_optimal_4, aes(x = Covariate, y = Value, fill = MS.NonMS)) +
        x = "Covariate",
        y = "Value") +
   facet_wrap(~ Covariate, scales = "free") # Create a separate plot for each covariate
+
 

@@ -155,13 +155,24 @@ t.test(cases_endvelocity, controls_endvelocity, var.equal = FALSE, alternative =
 ##### NON-PARAMETRIC HYPOTHESIS TESTING 
 library(gridExtra)
 
+# VERSION WITH VIOLIN PLOTS
+plot1 <- ggplot(data = df, aes(x=MS.NonMS, y=velocity_mean_end), 
+                color = "MS.NonMS", palette = c("dodgerblue4", "gray63"),
+                ylab = "Velocity Means End", xlab = "Groups") + geom_violin() + coord_flip()
+plot2 <- ggplot(data = df, aes(x="MS.NonMS", y="velocity_mean_start"), 
+                color = "MS.NonMS", palette = c("dodgerblue4", "gray63"),
+                ylab = "Velocity Means End", xlab = "Groups") + geom_violin() + coord_flip()
+grid.arrange(plot1, plot2, ncol = 2)
 
+# VERSION WITH NORMAL BOXPLOTS
 plot1 <- ggboxplot(data = df, x = "MS.NonMS", y = "velocity_mean_end", 
           color = "MS.NonMS", palette = c("dodgerblue4", "gray63"),
-          ylab = "Velocity end Mean", xlab = "Groups")
+          ylab = "Velocity Means End", xlab = "Groups") + coord_flip() + 
+  ggtitle("") + theme(legend.position="none") + theme(legend.title=element_blank())
 plot2 <- ggboxplot(data = df, x = "MS.NonMS", y = "velocity_mean_start", 
           color = "MS.NonMS", palette = c("dodgerblue4", "gray63"),
-          ylab = "Velocity start Mean", xlab = "Groups")
+          ylab = "Velocity Means Start", xlab = "Groups") + coord_flip() +
+  ggtitle("") + theme(legend.position="none") + theme(legend.title=element_blank())
 grid.arrange(plot1, plot2, ncol = 2)
 
 ## Wilcoxon rank sum test (Non parametric) ~ two sample, hence MANN-WHITNEY

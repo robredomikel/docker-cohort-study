@@ -13,8 +13,9 @@ We first get the data for our study
 ```{r}
 
 raw_df <- read.csv('/Users/mrobredo23/OULU/docker_cohort-24/data/final_data_file.csv')
-raw_df <- subset(raw_df, select = -c(trimmed_languages))ß
+raw_df <- subset(raw_df, select = -c(trimmed_languages))
 raw_df$velocity_mean_end <- raw_df$velocity_mean_end + 0.01
+raw_df$velocity_mean_start <- raw_df$velocity_mean_start + 0.01
 head(raw_df)
 df <- raw_df[c(2:ncol(raw_df))] # For the modelling purposes
 ```
@@ -22,7 +23,7 @@ df <- raw_df[c(2:ncol(raw_df))] # For the modelling purposes
 We change the categorical values into numerical factors
 
 ```{r}
-df$MS.NonMS <- ifelse(df$MS.NonMS=="MS",1,0)
+df$MS.NonMS <- as.factor(ifelse(df$MS.NonMS=="MS",1,0))
 df$main_language <- as.factor(df$main_language)
 df$creation_year <- as.factor(df$creation_year)
 
@@ -61,7 +62,7 @@ mycforest <- cforest(ps_formula, data=df, controls=my_controls)
 predictedProbabilities <- predict(mycforest, type="prob")
 
 #organize the list into a matrix 
-pScores2 <- matrix(unlist(predictedProbabilities),,1,byrow=T)[,1]
+pScores2 <- matrix(unlist(predictedProbabilities),,2,byrow=T)[,2] # Second column: Propensity scores
 
 #convert propensity scores to logit
 df$logitPScoresRF <- log(pScores2/(1-pScores2))
@@ -97,6 +98,7 @@ Estimate propensity scores with generalized boosted modeling (GBM)
 library(twang)
 set.seed(2015)
 
+df$MS.NonMS <- as.numeric(df$MS.NonMS)
 myGBM <- ps(ps_formula, data = df, n.trees=10000, interaction.depth=4,
             shrinkage=0.01, stop.method=c("es.max"), estimand = "ATT", 
             verbose=TRUE)
@@ -115,8 +117,8 @@ Obtain summary statistics of common support for propensity scores estimated with
 ```{r}
 #create a table
 tableCommonSupport = rbind(
-  summary(df[df$MS.NonMS==1,c(ncol(df)-2, ncol(df)-1, ncol(df))]),
-  summary(df[df$MS.NonMS==0,c(ncol(df)-2, ncol(df)-1, ncol(df))]))
+  summary(df[df$MS.NonMS==2,c(ncol(df)-2, ncol(df)-1, ncol(df))]),
+  summary(df[df$MS.NonMS==1,c(ncol(df)-2, ncol(df)-1, ncol(df))]))
 rownames(tableCommonSupport) = c(rep("Treated",6),rep("Control",6))
 
 # write.csv(tableCommonSupport, file="Table_common_support.csv")   
@@ -125,14 +127,14 @@ rownames(tableCommonSupport) = c(rep("Treated",6),rep("Control",6))
 #and proportion of control cases below minum treated cases
 #for logistic regression
 with(df, 100*c(
-  mean(as.numeric(df$logitPScores[df$MS.NonMS==1] > max(df$logitPScores[df$MS.NonMS==0]))),
-  mean(as.numeric(df$logitPScores[df$MS.NonMS==0] < min(df$logitPScores[df$MS.NonMS==1])))))
+  mean(as.numeric(df$logitPScores[df$MS.NonMS==2] > max(df$logitPScores[df$MS.NonMS==1]))),
+  mean(as.numeric(df$logitPScores[df$MS.NonMS==1] < min(df$logitPScores[df$MS.NonMS==2])))))
 
 #obtain proportions of treated cases above maximum control cases
 percentageAbove = with(df, 100*c(
-  mean(as.numeric(df$logitPScores[df$MS.NonMS==1] > max(df$logitPScores[df$MS.NonMS==0]))),
-  mean(as.numeric(df$logitPScoresRF[df$MS.NonMS==1] > max(df$logitPScoresRF[df$MS.NonMS==0]))),
-  mean(as.numeric(df$pScoresGBM[df$MS.NonMS==1] > max(df$pScoresGBM[df$MS.NonMS==0])))))
+  mean(as.numeric(df$logitPScores[df$MS.NonMS==2] > max(df$logitPScores[df$MS.NonMS==1]))),
+  mean(as.numeric(df$logitPScoresRF[df$MS.NonMS==2] > max(df$logitPScoresRF[df$MS.NonMS==1]))),
+  mean(as.numeric(df$pScoresGBM[df$MS.NonMS==2] > max(df$pScoresGBM[df$MS.NonMS==1])))))
 
 #obtain proportions of control cases below minimum treated cases
 percentageBelow = with(df, 100*c(
@@ -146,7 +148,8 @@ Ploting whiskers plots and density histograms for the propensity scores
 
 ```{r}
 #evaluate common support with box and whiskers plot
-df$MS.NonMS = factor(df$MS.NonMS)
+df$MS.NonMS <- as.factor(ifelse(df$MS.NonMS==2,"MS","~MS"))
+
 library(lattice)
 lattice.options(default.theme = standard.theme(color = FALSE))
 
@@ -837,7 +840,9 @@ summary(model.fullMatching2)
 - The balance after the matching with the matched data is perfect.
 
 ```{r}
-exactMatching <- matchit(MS.NonMS ~ main_language + n_languages, data = df, method = "exact")
+exactMatching <- matchit(MS.NonMS ~ main_language, data = df, method = "exact",
+                         estimand = "ATT")
+exactMatching$weights # We don't do exact matching on Number of languages but a more flexible format.
 
 #diagnose covariate balance
 balance.exactMatching <- summary(exactMatching, standardize=T)

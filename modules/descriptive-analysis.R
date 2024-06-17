@@ -9,6 +9,14 @@ library(gridExtra)
 library(dplyr)
 library(car)
 library(rgl)
+library(xtable)
+
+###########################################
+# EDA on confounders (for the paper)
+###########################################
+
+main_language_sumtable <- as.table(summary(df$main_language))
+print(xtable(main_language_sumtable), type="latex")
 
 ###########################################
 # DESCRIPTIVE ANALYSIS
