@@ -840,12 +840,27 @@ summary(model.fullMatching2)
 - The balance after the matching with the matched data is perfect.
 
 ```{r}
+library(xtable)
+# INITIAL VISUALIZATION TABLE OF THE BALANCE BEFORE MATCHING
+beforeMatching <- matchit(MS.NonMS ~ velocity_mean_start + size + main_language + n_languages + 
+    creation_year + n_commits + n_issues + n_contributors, data = df, method = "full",
+                         estimand = "ATT")
+sum_table_before <- summary(beforeMatching, standardize=T)
+print(xtable(sum_table_before$sum.all, type="latex"))
+
+##################
+
 exactMatching <- matchit(MS.NonMS ~ main_language, data = df, method = "exact",
                          estimand = "ATT")
 exactMatching$weights # We don't do exact matching on Number of languages but a more flexible format.
 
 #diagnose covariate balance
 balance.exactMatching <- summary(exactMatching, standardize=T)
+print(xtable(balance.exactMatching$nn, type="latex"))
+
+# plot of the summary
+plot(summary(exactMatching))
+
 #extract the table of balance after matching
 table.balance <- balance.exactMatching$sum.matched
 
@@ -856,6 +871,14 @@ table(data.exactMatching$subclass)
 #check the weights
 table(data.exactMatching$weights)
 sum(data.exactMatching$weights)
+
+####################
+
+# SECOND VISUALIZATION TABLE OF THE BALANCE BEFORE MATCHING
+afterMatching <- matchit(MS.NonMS ~ velocity_mean_start + size + n_languages + creation_year + n_commits + n_issues + n_contributors, data = df, method = "full",
+                         estimand = "ATT")
+sum_table_after <- summary(afterMatching, standardize=T)
+print(xtable(sum_table_after$sum.all, type="latex"))
 
 #estimate the treatment effect
 library(survey)

@@ -8,10 +8,13 @@ modules/__pycache__/
 *.json
 *.RData
 *.Rhistory
+*.pdf
 
 # Files not to be included
-*.ipynb
+draft.ipynb
+draft-example.ipynb
 *.Rproj
 .DS_Store
 .Rproj.user
 modules/weighted-matching.nb.html
+*-long.R

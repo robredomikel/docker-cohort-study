@@ -9,6 +9,8 @@ library(nortest)
 library(fBasics)
 library("ggpubr")
 library("yarr")
+library(xtable)
+library(lsr)
 
 ############### HELP FUNCTIONS
 
@@ -74,7 +76,7 @@ par(mfrow=c(1,1))
 # Definitely non-normal
 
 normality_plot(cases_endvelocity, controls_endvelocity, "MS projects", 
-               "~MS projects", "~MS projects")
+               "non-MS projects", "non-MS projects")
 
 # Through Shapiro-Wilk test: (Given our small sample sizes... it matches the case scenario)
 shapiro.test(cases_endvelocity) # For cases
@@ -159,20 +161,31 @@ library(gridExtra)
 plot1 <- ggplot(data = df, aes(x=MS.NonMS, y=velocity_mean_end), 
                 color = "MS.NonMS", palette = c("dodgerblue4", "gray63"),
                 ylab = "Velocity Means End", xlab = "Groups") + geom_violin() + coord_flip()
-plot2 <- ggplot(data = df, aes(x="MS.NonMS", y="velocity_mean_start"), 
+plot2 <- ggplot(data = df, aes(x=MS.NonMS, y=velocity_mean_start), 
                 color = "MS.NonMS", palette = c("dodgerblue4", "gray63"),
                 ylab = "Velocity Means End", xlab = "Groups") + geom_violin() + coord_flip()
 grid.arrange(plot1, plot2, ncol = 2)
 
-# VERSION WITH NORMAL BOXPLOTS
-plot1 <- ggboxplot(data = df, x = "MS.NonMS", y = "velocity_mean_end", 
-          color = "MS.NonMS", palette = c("dodgerblue4", "gray63"),
-          ylab = "Velocity Means End", xlab = "Groups") + coord_flip() + 
-  ggtitle("") + theme(legend.position="none") + theme(legend.title=element_blank())
-plot2 <- ggboxplot(data = df, x = "MS.NonMS", y = "velocity_mean_start", 
-          color = "MS.NonMS", palette = c("dodgerblue4", "gray63"),
-          ylab = "Velocity Means Start", xlab = "Groups") + coord_flip() +
-  ggtitle("") + theme(legend.position="none") + theme(legend.title=element_blank())
+# VERSION WITH NORMAL BOXPLOTS 
+df_renamed <- df
+df_renamed <- df_renamed %>%
+  mutate(MS.NonMS = fct_recode(MS.NonMS, "Non-MS" =  "~MS"))
+
+plot1 <- ggboxplot(data = df_renamed, x = "MS.NonMS", y = "velocity_mean_end", 
+          color = "MS.NonMS", palette = c("lavenderblush3", "lightcyan4", "black"),
+          ylab = "Velocity Means End", xlab = "") + coord_flip() + 
+  ggtitle("") + theme(legend.position="none") + theme(legend.title=element_blank()) +
+  geom_boxplot(aes(fill = `MS.NonMS`, color = "black"), outlier.shape = 21,
+               outlier.fill = 'transparent', outlier.alpha = 1, size = 0.8) +
+  font("xlab", size = 20, face = "bold") + font("xy.text", size = 16)
+
+plot2 <- ggboxplot(data = df_renamed, x = "MS.NonMS", y = "velocity_mean_start", 
+          color = "MS.NonMS", palette = c("lavenderblush3", "lightcyan4", "black"),
+          ylab = "Velocity Means Start", xlab = "") + coord_flip() +
+  ggtitle("") + theme(legend.position="none") + theme(legend.title=element_blank()) +
+  geom_boxplot(aes(fill = `MS.NonMS`, color = "black"), outlier.shape = 21,
+               outlier.fill = "transparent", outlier.alpha = 1, size = 0.8) +
+  font("xlab", size = 20, face = "bold") + font("xy.text", size = 16)
 grid.arrange(plot1, plot2, ncol = 2)
 
 ## Wilcoxon rank sum test (Non parametric) ~ two sample, hence MANN-WHITNEY
@@ -180,9 +193,10 @@ wilcox.test(cases_endvelocity, controls_endvelocity, alternative = "two.sided", 
 # Ho: Both distributions are equal (median difference is zero - two sided)
 # Ha: Both distributions are unequal (two-sided)
 
-wilcox.test(cases_endvelocity, controls_endvelocity, alternative = "less", conf.int = T) # p-value = 0.7013
-# Ho: The median of the first group is greater than the median of the second group (The time for projects to get issues closed is longer with MS pros than with Mono pros)
-# Ha: The median of the first group is less than the median of the second group. (The time for projects to get issues closed is shorter with MS pros than with Mono pros))
+mw_result <- wilcox.test(cases_endvelocity, controls_endvelocity, alternative = "less", conf.int = T) # p-value = 0.7013
+# Ho: The median of the first group is smaller than the median of the second group (The time for projects to get issues closed is shorter with MS pros than with Mono pros)
+# Ha: The median of the first group is greater than the median of the second group. (The time for projects to get issues closed is longer with MS pros than with Mono pros))
+
 
 #####################################################################
 
@@ -200,7 +214,8 @@ wilcox.test(cases_matched_endvelocity, controls_matched_endvelocity, alternative
 # Ho: Both distributions are equal (median difference is zero - two sided)
 # Ha: Both distributions are unequal (two-sided)
 
-wilcox.test(cases_matched_endvelocity, controls_matched_endvelocity, alternative = "less", conf.int = T) # p-value = 0.7013
+wilcox.test(cases_matched_endvelocity, controls_matched_endvelocity, alternative = "less", 
+            conf.int = T, conf.level = 0.95) # p-value = 0.7013
 # Ho: The median of the first group is greater than the median of the second group (The time for projects to get issues closed is longer with MS pros than with Mono pros)
 # Ha: The median of the first group is less than the median of the second group. (The time for projects to get issues closed is shorter with MS pros than with Mono pros))
 
@@ -213,4 +228,7 @@ wilcox.test(cases_matched_endvelocity, controls_matched_endvelocity, alternative
 t.test(cases_endvelocity_cube, controls_endvelocity_cube, var.equal = FALSE)
 # Trying the left sided sample t-test
 t.test(cases_endvelocity_cube, controls_endvelocity_cube, var.equal = FALSE, alternative = 'two.sided')
-t.test(cases_endvelocity_cube, controls_endvelocity_cube, var.equal = FALSE, alternative = 'less')
+t.test(cases_endvelocity_cube, controls_endvelocity_cube, var.equal = FALSE, alternative = 'less', conf.level = 0.95)
+
+# QUANTIFICATION OF THE DIFFERENCE
+cohensD(x=cases_endvelocity_cube, controls_endvelocity_cube, method = "pooled")

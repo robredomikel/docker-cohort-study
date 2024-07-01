@@ -2,22 +2,7 @@ library(TOSTER)
 library(MatchIt)
 library(optmatch)
 library(Matching) 
-
-
-# MODIFICATION OF df FOR VARIABLE NAMES IN VISUALIZATIONS
-df_renamed <- df %>% rename(
-  `# Commits` = n_commits,
-  `# Developers`= n_contributors,
-  `# Issues`= n_issues,
-  `# Programming languages`= n_languages, 
-  `Size of the project`= size, 
-  `Start Velocity`= velocity_mean_start,
-  `End Velocity`= velocity_mean_end,
-  `MS/Non-MS`= MS.NonMS,
-  `Development language`= main_language,
-  `Creation Year`= creation_year
-)
-
+library(dplyr)
 
 ############################################
 # MATCHED DATA
@@ -77,9 +62,14 @@ barp1 <- ggplot(df_language, aes(x = main_language, y = Count, fill = as.factor(
 barp1 + scale_fill_manual(values = c("dodgerblue4", "gray63"))
 
 # Same based on creation year
-df_creation <- df %>%
+library(forcats)
+df_creation <- df
+df_creation <- df_creation %>%
+  mutate(MS.NonMS = fct_recode(MS.NonMS, "Non-MS" =  "~MS"))
+df_creation <- df_creation %>%
   group_by(creation_year, MS.NonMS) %>%
   summarise(Count = n(), .groups = 'drop')
+
 
 barp2 <- ggplot(df_creation, aes(x = creation_year, y = Count, fill = as.factor(MS.NonMS))) +
   geom_bar(stat = "identity", position = position_dodge(width = 0.7), width = 0.6) +
@@ -88,7 +78,9 @@ barp2 <- ggplot(df_creation, aes(x = creation_year, y = Count, fill = as.factor(
        y = "Count",
        fill = "Category") +
   theme_minimal()
-barp2 + scale_fill_manual(values = c("dodgerblue4", "gray63"))
+barp2 + scale_fill_manual(values = c("dodgerblue4", "gray63")) + font("xlab", size = 16, face = "bold") +
+  font("ylab", size = 16, face = "bold") + font("title", size = 18, face = "bold") +
+  font("xy.text", size = 12) + font("legend.text", size = 12) + font("legend.title", size = 12)
 
 # Same based on number of languages
 df_numlang <- df %>%
@@ -340,30 +332,32 @@ for (i in seq_along(confounders)){
 #### Graphically
 
 header_names <- c("MS.NonMS", "velocity_mean_start", "size", "n_languages", "n_commits", "n_issues", "n_contributors")
+proper_names <- c("MS.NonMS", "Velocity Start", "Project size", "# Languages", "# Commits", "# Issues", "# Developers")
 cont_subset_df <- subset(data.exactMatching, select = header_names)
+cont_subset_df$MS.NonMS <- as.factor(ifelse(cont_subset_df$MS.NonMS=="MS",1,0))
 
 # Kernel density distribution
 par(mfrow=c(2, 3)) 
 # header_names[2:length(header_names)]
 for (i in seq(from=2, to=length(header_names))){
   
-  
-  cases <- cont_subset_df[,header_names[i]][cont_subset_df[,header_names[1]] == 2] # MS
-  controls <- cont_subset_df[,header_names[i]][cont_subset_df[,header_names[1]] == 1] # ~MS
+  # NOTE THAT THE THE TREATMENT VARIABLE HAS BEEN MODIFIED TO NUMERICAL IN weighted-mathching script
+  cases <- cont_subset_df[,header_names[i]][cont_subset_df[,header_names[1]] == 1] # MS
+  controls <- cont_subset_df[,header_names[i]][cont_subset_df[,header_names[1]] == 0] # ~MS
   cases_density <- density(cases)
   controls_density <- density(controls)
   max_density <- max(c(cases_density$y, controls_density$y))
   
-  hist(controls, freq = F, main = paste('Histogram of', header_names[i]),
-       ylab="Kernel density", col = rgb(0.062745, 0.305882, 0.545098, 0.5), 
-       xlab = header_names[i], probability = T,  xlim=range(cont_subset_df[i]),
-       ylim = c(0, max_density * 1.1))
+  hist(controls, freq = F, main = paste('Histogram of', proper_names[i]),
+       ylab="", col = rgb(0.062745, 0.305882, 0.545098, 0.5), 
+       xlab = proper_names[i], probability = T,  xlim=range(cont_subset_df[i]),
+       ylim = c(0, max_density * 1.1), cex.main=2, cex.axis=1.5, cex.lab=1.75)
   lines(density(controls), col = "dodgerblue4", lwd=2)
   
   hist(cases, freq = F, col = rgb(1.000000, 0.549020, 0.000000, 0.5), probability = T, add=T)
   lines(density(cases), col = "darkorange", lwd=2)
   
-  legend("topright", legend = c("~MS", "MS"), fill = c(rgb(0.062745, 0.305882, 0.545098, 0.5), rgb(1.000000, 0.549020, 0.000000, 0.5)))
+  # legend("topright", legend = c("NonMS", "MS"), fill = c(rgb(0.062745, 0.305882, 0.545098, 0.5), rgb(1.000000, 0.549020, 0.000000, 0.5)))
 }
 
 par(mfrow=c(1, 1))
@@ -373,15 +367,16 @@ par(mfrow=c(2, 3))
 # header_names[2:length(header_names)]
 for (i in seq(from=2, to=length(header_names))){
   
-  cases <- cont_subset_df[,header_names[i]][cont_subset_df[,header_names[1]] == 2] # MS
-  controls <- cont_subset_df[,header_names[i]][cont_subset_df[,header_names[1]] == 1] #~MS 
+  cases <- cont_subset_df[,header_names[i]][cont_subset_df[,header_names[1]] == 1] # MS
+  controls <- cont_subset_df[,header_names[i]][cont_subset_df[,header_names[1]] == 0] #~MS 
   cases_cdf <- ecdf(cases)
   controls_cdf <- ecdf(controls)
   xlim <- range(cont_subset_df[, header_names[i]])
   
-  plot(controls_cdf, main = paste('CDF of', header_names[i]), xlab = header_names[i], ylab = 'Cumulative Probability', 
-       col = rgb(1.000000, 0.549020, 0.000000, 0.5), xlim = xlim, verticals = TRUE, do.points = FALSE, lwd=2)
-  lines(cases_cdf, col = rgb(0.062745, 0.305882, 0.545098, 0.5), verticals = TRUE, do.points = FALSE, lwd=2)
+  plot(controls_cdf, main = paste('CDF of', proper_names[i]), xlab = proper_names[i], ylab = '', 
+       col = rgb(1.000000, 0.549020, 0.000000, 1), xlim = xlim, verticals = TRUE, do.points = FALSE, lwd=5,
+       cex.main=2, cex.axis=1.5, cex.lab=1.75)
+  lines(cases_cdf, col = rgb(0.062745, 0.305882, 0.545098, 1), verticals = TRUE, do.points = FALSE, lwd=5)
   # Add legend
   legend("bottomright", legend = c("~MS", "MS"), col = c(rgb(0.062745, 0.305882, 0.545098, 0.5), rgb(1.000000, 0.549020, 0.000000, 0.5)), lty = 1)
 }

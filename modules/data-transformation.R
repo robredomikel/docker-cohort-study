@@ -1,4 +1,5 @@
 library(forecast)
+library(nortest)
 
 ###########################################
 # DATA TRANSFORMATION
@@ -81,13 +82,18 @@ controls_endvelocity_cube <- (controls_endvelocity)^(1/3)
 
 
 normality_plot(cases_endvelocity, cases_endvelocity_cube, "Original cases", 
-               "Root cube cases", "cube transformation")
+               "Root cube velocity MS", "cube transformation")
 normality_plot(controls_endvelocity, controls_endvelocity_cube, "Original controls", 
-               "Root cube controls", "cube transformation")
+               "Root cube velocity non-MS", "cube transformation")
 
-# Normality test 
+# Normality test (SW)
 shapiro.test(cases_endvelocity_cube)
 shapiro.test(controls_endvelocity_cube)
+
+# AD
+ad.test(cases_endvelocity_cube)
+ad.test(controls_endvelocity_cube)
+
 
 
 ###########################################
@@ -177,6 +183,9 @@ normality_plot(controls_endvelocity_cube, controls_sample_cube, "Log pop control
 shapiro.test(cases_sample_cube) # p-value = 0.3315
 shapiro.test(controls_sample_cube) # p-value = 0.5641
 
+# AD
+ad.test(cases_sample_cube)
+ad.test(controls_sample_cube)
 
 #### CONCLUSION: The Log and Cube transformations present potential options for running the parametric tests.
 
