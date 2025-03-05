@@ -1,0 +1,893 @@
+---
+title: "Matching stage of the analysis"
+output: html_notebook
+---
+
+Matching analysis based on material found on internet, specially with modified codes from:
+https://www.practicalpropensityscore.com
+
+
+
+We first get the data for our study 
+
+```{r}
+
+raw_df <- read.csv('/Users/mrobredo23/OULU/docker_cohort-24/data/final_data_file.csv')
+raw_df <- subset(raw_df, select = -c(trimmed_languages))
+raw_df$velocity_mean_end <- raw_df$velocity_mean_end + 0.01
+raw_df$velocity_mean_start <- raw_df$velocity_mean_start + 0.01
+head(raw_df)
+df <- raw_df[c(2:ncol(raw_df))] # For the modelling purposes
+```
+
+We change the categorical values into numerical factors
+
+```{r}
+df$MS.NonMS <- as.factor(ifelse(df$MS.NonMS=="MS",1,0))
+df$main_language <- as.factor(df$main_language)
+df$creation_year <- as.factor(df$creation_year)
+
+head(df) # Cases = 1, controls = 0
+```
+
+# PROPENSITY SCORE ESTIMATION
+```{r}
+covariate_names <- colnames(df[c(2, 4:ncol(df))])
+
+#obtain the propensity score formula   
+ps_formula <- paste(covariate_names, collapse="+")
+ps_formula <- formula(paste("MS.NonMS~",ps_formula, sep=""))
+print(ps_formula)
+```
+
+PS calculated through Logistic Regression
+
+```{r}
+ps_model <- glm(ps_formula, df, family=binomial())
+summary(ps_model)
+print(summary(ps_model))
+df$logitPScores <- log(fitted(ps_model)/(1-fitted(ps_model)))
+```
+
+PS calculated through Random Forests
+- The number of trees: The state-of-the-art suggests that the number of variables to be considered in each
+tree should be the sqrt(num_variables)
+```{r}
+library(party)
+set.seed(2024)
+my_controls <- cforest_unbiased(ntree=10000, mtry=3) # sqrt(8) = 2.8  
+mycforest <- cforest(ps_formula, data=df, controls=my_controls)
+
+#obtain a list of predicted probabilities
+predictedProbabilities <- predict(mycforest, type="prob")
+
+#organize the list into a matrix 
+pScores2 <- matrix(unlist(predictedProbabilities),,2,byrow=T)[,2] # Second column: Propensity scores
+
+#convert propensity scores to logit
+df$logitPScoresRF <- log(pScores2/(1-pScores2))
+
+hist(df$logitPScores[df$MS.NonMS==0], density = 10, angle = 45, main="Propensity Scores Logit",
+     xlab="Shaded = Untreated | Gray = Treated") 
+hist(df$logitPScores[df$MS.NonMS==1], col=gray(0.4,0.25), add=T) 
+
+library(lattice)
+bwplot( logitPScores~MS.NonMS, data = df, 
+        ylab = "Propensity Scores Logit", auto.key = TRUE)
+bwplot( logitPScoresRF~MS.NonMS, data = df, 
+        ylab = "Propensity Scores RF", auto.key = TRUE)
+ 
+#obtain descriptive statistics for logistic regression
+summary(df$logitPScores[df$MS.NonMS==1])
+summary(df$logitPScores[df$MS.NonMS==0])
+
+#obtain descriptive statistics for RF
+summary(df$logitPScoresRF[df$MS.NonMS==1])
+summary(df$logitPScoresRF[df$MS.NonMS==0])
+
+```
+
+Estimate propensity scores with generalized boosted modeling (GBM)
+
+- Number of trees is defined as based on the state-of-the-art, most likely we may not need that amount to reach rhe maxima.
+- The interction depth follows the same logic of variable interaction as with the random forest
+- Stoping criteria: Looking for covariate balance, we look for maximum effect size of the of the matches, defore minimizing the difference between means across treatment and control observations. 
+- estimand: We are estimating the ATT (for the average treatment effect of the treated)
+
+```{r}
+library(twang)
+set.seed(2015)
+
+df$MS.NonMS <- as.numeric(df$MS.NonMS)
+myGBM <- ps(ps_formula, data = df, n.trees=10000, interaction.depth=4,
+            shrinkage=0.01, stop.method=c("es.max"), estimand = "ATT", 
+            verbose=TRUE)
+print(summary(myGBM))
+plot(myGBM,type="b", color=F, lwd=2)
+
+#extract estimated propensity scores from object
+pScoresGBM <- myGBM$ps
+names(pScoresGBM) = "pScoresGBM"
+df$pScoresGBM <- unlist(pScoresGBM)
+write.csv(df, '/Users/mrobredo23/OULU/docker_cohort-24/data/data_with_pScores.csv', row.names = F)
+```
+
+Obtain summary statistics of common support for propensity scores estimated with the first imputed dataset
+
+```{r}
+#create a table
+tableCommonSupport = rbind(
+  summary(df[df$MS.NonMS==2,c(ncol(df)-2, ncol(df)-1, ncol(df))]),
+  summary(df[df$MS.NonMS==1,c(ncol(df)-2, ncol(df)-1, ncol(df))]))
+rownames(tableCommonSupport) = c(rep("Treated",6),rep("Control",6))
+
+# write.csv(tableCommonSupport, file="Table_common_support.csv")   
+
+#obtain proportion of treated cases above maximum control cases 
+#and proportion of control cases below minum treated cases
+#for logistic regression
+with(df, 100*c(
+  mean(as.numeric(df$logitPScores[df$MS.NonMS==2] > max(df$logitPScores[df$MS.NonMS==1]))),
+  mean(as.numeric(df$logitPScores[df$MS.NonMS==1] < min(df$logitPScores[df$MS.NonMS==2])))))
+
+#obtain proportions of treated cases above maximum control cases
+percentageAbove = with(df, 100*c(
+  mean(as.numeric(df$logitPScores[df$MS.NonMS==2] > max(df$logitPScores[df$MS.NonMS==1]))),
+  mean(as.numeric(df$logitPScoresRF[df$MS.NonMS==2] > max(df$logitPScoresRF[df$MS.NonMS==1]))),
+  mean(as.numeric(df$pScoresGBM[df$MS.NonMS==2] > max(df$pScoresGBM[df$MS.NonMS==1])))))
+
+#obtain proportions of control cases below minimum treated cases
+percentageBelow = with(df, 100*c(
+  mean(as.numeric(df$logitPScores[df$MS.NonMS==0] < min(df$logitPScores[df$MS.NonMS==1]))),
+  mean(as.numeric(df$logitPScoresRF[df$MS.NonMS==0] < min(df$logitPScoresRF[df$MS.NonMS==1]))),
+  mean(as.numeric(df$pScoresGBM[df$MS.NonMS==0] < min(df$pScoresGBM[df$MS.NonMS==1])))))
+
+```
+
+Ploting whiskers plots and density histograms for the propensity scores
+
+```{r}
+#evaluate common support with box and whiskers plot
+df$MS.NonMS <- as.factor(ifelse(df$MS.NonMS==2,"MS","~MS"))
+
+library(lattice)
+lattice.options(default.theme = standard.theme(color = FALSE))
+
+bwplot( df$logitPScores~df$MS.NonMS, data = df,  ylab = "Propensity Scores", xlab = "Treatment",auto.key = TRUE)
+
+bwplot( df$logitPScoresRF~df$MS.NonMS ,  data = df,  ylab = "Propensity Scores", xlab = "Treatment",auto.key = TRUE)
+
+bwplot( df$pScoresGBM~df$MS.NonMS,  data = df,  ylab = "Propensity Scores", xlab = "Treatment",auto.key = TRUE)
+
+#evaluate common support with kernel density plots
+require(lattice)
+lattice.options(default.theme = standard.theme(color = FALSE))
+
+densityplot( ~df$logitPScores, groups=df$MS.NonMS, plot.points=F, xlim=c(0,1), lwd=2,
+             data = df,  ylab = "Propensity Scores", xlab = "Treatment",auto.key = TRUE)
+
+densityplot( ~df$logitPScoresRF, groups=df$MS.NonMS, plot.points=F, xlim=c(0,1), lwd=2,
+             data = df,  ylab = "Propensity Scores", xlab = "Treatment",auto.key = TRUE)
+
+densityplot( ~df$pScoresGBM, groups=df$MS.NonMS, plot.points=F, xlim=c(0,1), lwd=2,
+             data = df,  ylab = "Propensity Scores", xlab = "Treatment",auto.key = TRUE)
+```
+
+# ONE-2-ONE GREEDY MATCHING
+
+## With Logistic regression scores 
+
+- distance: The propensity scores estimated through the different three techniques.
+- caliper: Is the maximum distance we consider as acceptable for any match, if it exceeds this,
+           then it means that the matching is too light
+- ratio: Considered ratio of controls per treatment cases.
+- Replacement: We use it to have more than one matching opportunity 
+
+Standardized mean differences below 0.25 are accepted as set by the caliper.
+Therefore, the caliper worked and we are having reasonable covariate balance. In theory.
+```{r}
+library(MatchIt) #library for propensity score matching
+greedyMatching <- matchit(ps_formula,distance=df$logitPScores, 
+                          data = df, 
+                          method = "nearest",ratio=1,replace=T,caliper=0.25)
+
+
+#diagnose covariate balance
+(balance.greedyMatching <- summary(greedyMatching, standardize=T))
+
+#obtain the summary of balance aftdr matching 
+summary(abs(balance.greedyMatching$sum.matched[, "Std. Mean Diff."]))
+table(abs(balance.greedyMatching$sum.matched[, "Std. Mean Diff."]) > 0.1)
+# Still, there are 9 variables that exceed 0.1 standard deviation on the SMD
+
+#estimate ATT with one-to-one greedy matching with replacement
+#within 0.25 caliper
+
+#obtain matched data
+data.greedyMatching <- match.data(greedyMatching)
+
+
+
+library(survey)
+design.greedyMatching <- svydesign(ids=~1, weights=~weights,
+                                   data=data.greedyMatching)
+#estimate the ATT 
+model.greedyMatching <- svyglm(velocity_mean_end~MS.NonMS, design.greedyMatching, family=gaussian())
+summary(model.greedyMatching)
+# RESULT FROM THE CRUDE ANALYSIS AFTER MATCHING: The treatment (MS architecture is not statistically significant)
+```
+
+## With Random Forest scores
+
+- Worse results than with Logistic Regression.
+
+```{r}
+greedyMatching <- matchit(ps_formula,distance=df$logitPScoresRF, 
+                          data = df, 
+                          method = "nearest",ratio=1,replace=T,caliper=0.25)
+
+
+#diagnose covariate balance
+(balance.greedyMatching <- summary(greedyMatching, standardize=T))
+
+#obtain the summary of balance aftdr matching 
+summary(abs(balance.greedyMatching$sum.matched[, "Std. Mean Diff."]))
+table(abs(balance.greedyMatching$sum.matched[, "Std. Mean Diff."]) > 0.1)
+# Still, there are 22 variables that exceed 0.1 standard deviation
+
+#estimate ATT with one-to-one greedy matching with replacement
+#within 0.25 caliper
+
+#obtain matched data
+data.greedyMatching <- match.data(greedyMatching)
+
+
+
+library(survey)
+design.greedyMatching <- svydesign(ids=~1, weights=~weights,
+                                   data=data.greedyMatching)
+#estimate the ATT 
+model.greedyMatching <- svyglm(velocity_mean_end~MS.NonMS, design.greedyMatching, family=gaussian())
+summary(model.greedyMatching)
+# RESULT FROM THE CRUDE ANALYSIS AFTER MATCHING: The treatment (MS architecture is not statistically significant)
+```
+
+## With Generalized Boosted Modeling
+
+- Useless, we cannot work with the 1:1 matching here, it's too rigid
+
+```{r}
+greedyMatching <- matchit(ps_formula,distance=df$pScoresGBM, 
+                          data = df, 
+                          method = "nearest",ratio=1,replace=T,caliper=0.25)
+
+
+#diagnose covariate balance
+(balance.greedyMatching <- summary(greedyMatching, standardize=T))
+
+#obtain the summary of balance aftdr matching 
+summary(abs(balance.greedyMatching$sum.matched[, "Std. Mean Diff."]))
+table(abs(balance.greedyMatching$sum.matched[, "Std. Mean Diff."]) > 0.1)
+# Still, there are 22 variables that exceed 0.1 standard deviation
+
+#estimate ATT with one-to-one greedy matching with replacement
+#within 0.25 caliper
+
+#obtain matched data
+data.greedyMatching <- match.data(greedyMatching)
+
+
+
+library(survey)
+design.greedyMatching <- svydesign(ids=~1, weights=~weights,
+                                   data=data.greedyMatching)
+#estimate the ATT 
+model.greedyMatching <- svyglm(velocity_mean_end~MS.NonMS, design.greedyMatching, family=gaussian())
+summary(model.greedyMatching)
+# RESULT FROM THE CRUDE ANALYSIS AFTER MATCHING: The treatment (MS architecture is not statistically significant)
+```
+
+# VARIABLE RATIO GREEDY MATCHING
+
+## With logistic propensity scores
+
+For the Match function:
+- M: The nunmber of matches
+- ties: We specify that if there are multiple matches between controls towards one treatment, we accept it
+
+- The summary of the covariate balance provides a SMD of less than 0.2 with that value as the maximum.
+- The other criterion is the standard deviation of 0.1, which tells within the matches data what's the variables that present a higher standard deviation than 0.1.
+```{r}
+library(Matching) #load necessary package
+
+#Maching requires the treatment indicator to be logical (TRUE/FALSE)
+df$MS.NonMS <- ifelse(df$MS.NonMS==1, TRUE,FALSE) 
+
+greedyMatching2 <- with(df,
+                        Match(Y=velocity_mean_end, Tr=MS.NonMS, X=logitPScores,
+                              estimand = "ATT", M = 1,
+                              caliper = 0.25, replace=TRUE, ties=TRUE))
+
+#evaluate covariate balance
+balance.greedyMatching2 <- MatchBalance(ps_formula, data = df, match.out = greedyMatching2, 
+                                        ks = F, paired=F)
+balance.greedyMatching2After <- unlist(balance.greedyMatching2$AfterMatching)
+#summarize only the standized mean differences (they have been multiplied by 100, so I divided by 100)
+#see details in ?balanceUV
+summary(abs(balance.greedyMatching2After[names(balance.greedyMatching2After)=="sdiff"]/100))
+table(abs(balance.greedyMatching2After[names(balance.greedyMatching2After)=="sdiff"]/100)>0.1)
+
+
+#-------------------------
+#estimate ATT with variable ratio greedy matching 
+#with replacement and within 0.25 caliper 
+#standard error is obtained with Abadie and Imbens (2006) estimator
+summary(greedyMatching2) # Pff the performed matching is completely far from being statistically
+# significant.
+
+#=======================================
+#Rosenbaum Sensitivity Test for Wilcoxon Signed Rank P-Value
+#with genetic matching
+library(rbounds)
+
+psens(x=greedyMatching2$mdata$X, y = greedyMatching2$mdata$Y, Gamma=3, GammaInc=.1)
+# The p values are completely non significant, indeed the progression starts already being 1.
+```
+
+## With Random Forests propensity scores
+
+```{r}
+library(Matching) #load necessary package
+
+greedyMatching2 <- with(df,
+                        Match(Y=velocity_mean_end, Tr=MS.NonMS, X=logitPScoresRF,
+                              estimand = "ATT", M = 1,
+                              caliper = 0.25, replace=TRUE, ties=TRUE))
+
+#evaluate covariate balance
+balance.greedyMatching2 <- MatchBalance(ps_formula, data = df, match.out = greedyMatching2, 
+                                        ks = F, paired=F)
+# Definitely match better with a small p-value
+
+balance.greedyMatching2After <- unlist(balance.greedyMatching2$AfterMatching)
+#summarize only the standized mean differences (they have been multiplied by 100, so I divided by 100)
+#see details in ?balanceUV
+summary(abs(balance.greedyMatching2After[names(balance.greedyMatching2After)=="sdiff"]/100))
+table(abs(balance.greedyMatching2After[names(balance.greedyMatching2After)=="sdiff"]/100)>0.1)
+
+
+#-------------------------
+#estimate ATT with variable ratio greedy matching 
+#with replacement and within 0.25 caliper 
+#standard error is obtained with Abadie and Imbens (2006) estimator
+summary(greedyMatching2) 
+# Pff the performed matching is completely far from being statistically
+# significant.
+
+#=======================================
+#Rosenbaum Sensitivity Test for Wilcoxon Signed Rank P-Value
+#with genetic matching
+library(rbounds)
+
+psens(x=greedyMatching2$mdata$X, y = greedyMatching2$mdata$Y, Gamma=3, GammaInc=.1)
+# The p values are completely non significant, indeed the progression starts already being 1.
+```
+
+## With GBM propensity scores
+
+```{r}
+library(Matching) #load necessary package
+
+greedyMatching2 <- with(df,
+                        Match(Y=velocity_mean_end, Tr=MS.NonMS, X=pScoresGBM,
+                              estimand = "ATT", M = 1,
+                              caliper = 0.25, replace=TRUE, ties=TRUE))
+
+
+#evaluate covariate balance
+balance.greedyMatching2 <- MatchBalance(ps_formula, data = df, match.out = greedyMatching2, 
+                                        ks = F, paired=F)
+# Definitely match better with a small p-value
+
+balance.greedyMatching2After <- unlist(balance.greedyMatching2$AfterMatching)
+#summarize only the standized mean differences (they have been multiplied by 100, so I divided by 100)
+#see details in ?balanceUV
+summary(abs(balance.greedyMatching2After[names(balance.greedyMatching2After)=="sdiff"]/100))
+table(abs(balance.greedyMatching2After[names(balance.greedyMatching2After)=="sdiff"]/100)>0.1)
+
+#-------------------------
+#estimate ATT with variable ratio greedy matching 
+#with replacement and within 0.25 caliper 
+#standard error is obtained with Abadie and Imbens (2006) estimator
+summary(greedyMatching2) 
+# Pff the performed matching is completely far from being statistically
+# significant.
+
+#=======================================
+#Rosenbaum Sensitivity Test for Wilcoxon Signed Rank P-Value
+#with genetic matching
+library(rbounds)
+
+psens(x=greedyMatching2$mdata$X, y = greedyMatching2$mdata$Y, Gamma=3, GammaInc=.1)
+# The p values are completely non significant, indeed the progression starts already being 1.
+```
+
+# GENETIC MATCHING WITH PROPENSITY SCORES + COVARIATES
+
+## With logistic propensity scores
+
+For the Match function:
+- ties: It's greedy matching as we account for more controls per treat cases.
+
+```{r}
+covariateData <- as.matrix(df$logitPScores)
+df$main_language <- as.numeric(factor(df$main_language))
+df$creation_year <- as.numeric(factor(df$creation_year))
+covariate_names
+for (c in covariate_names) {
+  covariateData <- cbind(covariateData,as.numeric(as.matrix(df[,c]))) }
+colnames(covariateData) <- c("logitPScores",covariate_names)
+
+#convert the treatment from 0/1 to TRUE/FALSE as required by GenMatch
+library(rgenoud)
+
+geneticWeights <- GenMatch(Tr=df$MS.NonMS, X=covariateData, 
+                           pop.size=1000, fit.func="pvals", 
+                           estimand="ATT", replace=T, ties=T)
+
+geneticMatching <- Match(Y=df$velocity_mean_end, Tr=df$MS.NonMS, X=covariateData,
+                         Weight.matrix = geneticWeights, estimand = "ATT", 
+                         M = 1,  replace=TRUE, ties=TRUE)
+
+#evaluate covaraite balance
+balance.geneticMatching <- MatchBalance(ps_formula, data = df, match.out = geneticMatching, 
+                                        ks = F, paired=F)
+balance.geneticMatchingAfter <- unlist(balance.geneticMatching$AfterMatching)
+#summarize only the standized mean differences (they have been multiplied by 100, so I divided by 100)
+#see details in ?balanceUV
+summary(abs(balance.geneticMatchingAfter[names(balance.geneticMatchingAfter)=="sdiff"]/100))
+table(abs(balance.geneticMatchingAfter[names(balance.geneticMatchingAfter)=="sdiff"]/100)>0.1)
+
+#--------------------------------
+#estimate the ATT with variable ratio genetic matching
+#with replacement within 0.25 caliper
+#standard error is obtained with Abadie and Imbens (2006) estimator
+summary(geneticMatching)
+
+#-----------------------------------------
+#Repeat the genetic matching, but this time with bias adjustment
+geneticMatchingBA <- Match(Y=df$velocity_mean_end, Tr=df$MS.NonMS, X=covariateData,
+                           BiasAdjust=T, Z=covariateData,
+                           Weight.matrix = geneticWeights, estimand = "ATT", 
+                           M = 1,  replace=TRUE, ties=TRUE)
+
+summary(geneticMatchingBA)
+
+#=======================================
+#Rosenbaum Sensitivity Test for Wilcoxon Signed Rank P-Value
+#with genetic matching
+library(rbounds)
+
+psens(geneticMatching$mdata$X, geneticMatching$mdata$Y, Gamma=3, GammaInc=.1)
+```
+
+## With Random Forest propensity scores
+
+For the Match function:
+- ties: It's greedy matching as we account for more controls per treat cases.
+
+```{r}
+covariateData <- as.matrix(df$logitPScoresRF)
+df$main_language <- as.numeric(factor(df$main_language))
+df$creation_year <- as.numeric(factor(df$creation_year))
+covariate_names
+for (c in covariate_names) {
+  covariateData <- cbind(covariateData,as.numeric(as.matrix(df[,c]))) }
+colnames(covariateData) <- c("logitPScoresRF",covariate_names)
+
+#convert the treatment from 0/1 to TRUE/FALSE as required by GenMatch
+library(rgenoud)
+
+geneticWeights <- GenMatch(Tr=df$MS.NonMS, X=covariateData, 
+                           pop.size=1000, fit.func="pvals", 
+                           estimand="ATT", replace=T, ties=T)
+
+geneticMatching <- Match(Y=df$velocity_mean_end, Tr=df$MS.NonMS, X=covariateData,
+                         Weight.matrix = geneticWeights, estimand = "ATT", 
+                         M = 1,  replace=TRUE, ties=TRUE)
+
+#evaluate covaraite balance
+balance.geneticMatching <- MatchBalance(ps_formula, data = df, match.out = geneticMatching, 
+                                        ks = F, paired=F)
+balance.geneticMatchingAfter <- unlist(balance.geneticMatching$AfterMatching)
+#summarize only the standized mean differences (they have been multiplied by 100, so I divided by 100)
+#see details in ?balanceUV
+summary(abs(balance.geneticMatchingAfter[names(balance.geneticMatchingAfter)=="sdiff"]/100))
+table(abs(balance.geneticMatchingAfter[names(balance.geneticMatchingAfter)=="sdiff"]/100)>0.1)
+
+#--------------------------------
+#estimate the ATT with variable ratio genetic matching
+#with replacement within 0.25 caliper
+#standard error is obtained with Abadie and Imbens (2006) estimator
+summary(geneticMatching)
+
+#-----------------------------------------
+#Repeat the genetic matching, but this time with bias adjustment
+geneticMatchingBA <- Match(Y=df$velocity_mean_end, Tr=df$MS.NonMS, X=covariateData,
+                           BiasAdjust=T, Z=covariateData,
+                           Weight.matrix = geneticWeights, estimand = "ATT", 
+                           M = 1,  replace=TRUE, ties=TRUE)
+
+summary(geneticMatchingBA)
+
+#=======================================
+#Rosenbaum Sensitivity Test for Wilcoxon Signed Rank P-Value
+#with genetic matching
+library(rbounds)
+
+psens(geneticMatching$mdata$X, geneticMatching$mdata$Y, Gamma=3, GammaInc=.1)
+```
+
+## With GLM propensity scores
+
+For the Match function:
+- 
+
+```{r}
+covariateData <- as.matrix(df$pScoresGBM)
+df$main_language <- as.numeric(factor(df$main_language))
+df$creation_year <- as.numeric(factor(df$creation_year))
+covariate_names
+for (c in covariate_names) {
+  covariateData <- cbind(covariateData,as.numeric(as.matrix(df[,c]))) }
+colnames(covariateData) <- c("logitPScoresRF",covariate_names)
+
+#convert the treatment from 0/1 to TRUE/FALSE as required by GenMatch
+library(rgenoud)
+
+geneticWeights <- GenMatch(Tr=df$MS.NonMS, X=covariateData, 
+                           pop.size=1000, fit.func="pvals", 
+                           estimand="ATT", replace=T, ties=T)
+
+geneticMatching <- Match(Y=df$velocity_mean_end, Tr=df$MS.NonMS, X=covariateData,
+                         Weight.matrix = geneticWeights, estimand = "ATT", 
+                         M = 1,  replace=TRUE, ties=TRUE)
+
+#evaluate covaraite balance
+balance.geneticMatching <- MatchBalance(ps_formula, data = df, match.out = geneticMatching, 
+                                        ks = F, paired=F)
+balance.geneticMatchingAfter <- unlist(balance.geneticMatching$AfterMatching)
+#summarize only the standized mean differences (they have been multiplied by 100, so I divided by 100)
+#see details in ?balanceUV
+summary(abs(balance.geneticMatchingAfter[names(balance.geneticMatchingAfter)=="sdiff"]/100))
+table(abs(balance.geneticMatchingAfter[names(balance.geneticMatchingAfter)=="sdiff"]/100)>0.1)
+
+#--------------------------------
+#estimate the ATT with variable ratio genetic matching
+#with replacement within 0.25 caliper
+#standard error is obtained with Abadie and Imbens (2006) estimator
+summary(geneticMatching)
+
+#-----------------------------------------
+#Repeat the genetic matching, but this time with bias adjustment
+geneticMatchingBA <- Match(Y=df$velocity_mean_end, Tr=df$MS.NonMS, X=covariateData,
+                           BiasAdjust=T, Z=covariateData,
+                           Weight.matrix = geneticWeights, estimand = "ATT", 
+                           M = 1,  replace=TRUE, ties=TRUE)
+
+summary(geneticMatchingBA)
+
+#=======================================
+#Rosenbaum Sensitivity Test for Wilcoxon Signed Rank P-Value
+#with genetic matching
+library(rbounds)
+
+psens(geneticMatching$mdata$X, geneticMatching$mdata$Y, Gamma=3, GammaInc=.1)
+```
+
+# OPTIMAL ONE-TO-ONE MATCHING
+
+## With logistic propensity scores
+
+```{r}
+library(MatchIt)
+library(optmatch)
+df$MS.NonMS <- as.numeric(as.factor(df$MS.NonMS))
+#run the matching altorighm
+optimalMatching <- matchit(ps_formula,distance=df$logitPScores, 
+                           data = df, method = "optimal", ratio=1)
+
+
+#diagnose covariate balance
+(balance.optimalMatching <- summary(optimalMatching, standardize=T))
+#obtain the summary of balance after matching 
+summary(abs(balance.optimalMatching$sum.matched[, "Std. Mean Diff."]))
+table(abs(balance.optimalMatching$sum.matched[, "Std. Mean Diff."]) > 0.1)
+
+
+
+#------------------------------------------
+#estimate ATT with one-to-one optimal matched data
+#using regression
+
+#obtain matched data
+data.optimalMatching <- match.data(optimalMatching)
+
+library(survey)
+design.optimalMatching <- svydesign(ids=~subclass, weights=~weights,
+                                    data=data.optimalMatching)
+#fit regression model
+model.optimalMatching <- svyglm(velocity_mean_end~MS.NonMS, design.optimalMatching, family=gaussian())
+summary(model.optimalMatching)
+```
+
+## With Random Forest propensity scores
+```{r}
+df$MS.NonMS <- as.numeric(as.factor(df$MS.NonMS))
+#run the matching altorighm
+optimalMatching <- matchit(ps_formula,distance=df$logitPScoresRF, 
+                           data = df, method = "optimal", ratio=1)
+
+
+#diagnose covariate balance
+(balance.optimalMatching <- summary(optimalMatching, standardize=T))
+#obtain the summary of balance after matching 
+summary(abs(balance.optimalMatching$sum.matched[, "Std. Mean Diff."]))
+table(abs(balance.optimalMatching$sum.matched[, "Std. Mean Diff."]) > 0.1)
+
+
+
+#------------------------------------------
+#estimate ATT with one-to-one optimal matched data
+#using regression
+
+#obtain matched data
+data.optimalMatching <- match.data(optimalMatching)
+
+library(survey)
+design.optimalMatching <- svydesign(ids=~subclass, weights=~weights,
+                                    data=data.optimalMatching)
+#fit regression model
+model.optimalMatching <- svyglm(velocity_mean_end~MS.NonMS, design.optimalMatching, family=gaussian())
+summary(model.optimalMatching)
+```
+## With GBM propensity scores
+```{r}
+df$MS.NonMS <- as.numeric(as.factor(df$MS.NonMS))
+#run the matching altorighm
+optimalMatching <- matchit(ps_formula,distance=df$pScoresGBM, 
+                           data = df, method = "optimal", ratio=1)
+
+
+#diagnose covariate balance
+(balance.optimalMatching <- summary(optimalMatching, standardize=T))
+#obtain the summary of balance after matching 
+summary(abs(balance.optimalMatching$sum.matched[, "Std. Mean Diff."]))
+table(abs(balance.optimalMatching$sum.matched[, "Std. Mean Diff."]) > 0.1)
+
+
+
+#------------------------------------------
+#estimate ATT with one-to-one optimal matched data
+#using regression
+
+#obtain matched data
+data.optimalMatching <- match.data(optimalMatching)
+
+library(survey)
+design.optimalMatching <- svydesign(ids=~subclass, weights=~weights,
+                                    data=data.optimalMatching)
+#fit regression model
+model.optimalMatching <- svyglm(velocity_mean_end~MS.NonMS, design=design.optimalMatching, family=gaussian())
+summary(model.optimalMatching)
+```
+
+# OPTIMAL FULL MATCHING
+
+## With logistic propensity scores
+
+```{r}
+library(MatchIt) #library for propensity score matching
+library(optmatch)
+fullMatching <- matchit(ps_formula,distance=df$logitPScores, 
+                        data = df, method = "full")
+#the code above gives a warning that does not apply
+
+#if you get an error that the maximum size of the problem was exceeded
+#run this code: options("optmatch_max_problem_size" = Inf)
+#before you call matchit
+
+
+#diagnose covariate balance
+balance.fullMatching <- summary(fullMatching, standardize=T)
+#extract the table of balance after matching
+table.balance <- balance.fullMatching$sum.matched
+
+
+#------------------------------------------------------
+#Estimate ATT with optimal full matched data
+#using regression
+
+#obtain matched data
+data.fullMatching <- match.data(fullMatching)
+#check the number of subclasses created
+table(data.fullMatching$subclass)
+#check the weights
+table(data.fullMatching$weights)
+sum(data.fullMatching$weights)
+
+#estimate the treatment effect
+library(survey)
+design.fullMatching <- svydesign(ids=~1, weights=~weights,
+                                 data=data.fullMatching)
+#fit regression model
+model.fullMatching <- svyglm(velocity_mean_end ~ MS.NonMS, design.fullMatching, family=gaussian())
+summary(model.fullMatching)
+
+#estimate treatment effects adjusting for possible violation of independence 
+#due to matching of observations (cluster effects)
+design.fullMatching2 <- svydesign(ids=~subclass, weights=~weights,
+                                  data=data.fullMatching)
+design.fullMatching2 <- as.svrepdesign(design.fullMatching2, type="bootstrap",
+                                       replicates=1000)
+model.fullMatching2 <- svyglm(velocity_mean_end~MS.NonMS, design.fullMatching2, family=gaussian())
+summary(model.fullMatching2)
+```
+
+## With Random Forest propensity scores
+
+```{r}
+library(MatchIt) #library for propensity score matching
+library(optmatch)
+fullMatching <- matchit(ps_formula,distance=df$logitPScoresRF, 
+                        data = df, method = "full")
+#the code above gives a warning that does not apply
+
+#if you get an error that the maximum size of the problem was exceeded
+#run this code: options("optmatch_max_problem_size" = Inf)
+#before you call matchit
+
+
+#diagnose covariate balance
+balance.fullMatching <- summary(fullMatching, standardize=T)
+#extract the table of balance after matching
+table.balance <- balance.fullMatching$sum.matched
+
+
+#------------------------------------------------------
+#Estimate ATT with optimal full matched data
+#using regression
+
+#obtain matched data
+data.fullMatching <- match.data(fullMatching)
+#check the number of subclasses created
+table(data.fullMatching$subclass)
+#check the weights
+table(data.fullMatching$weights)
+sum(data.fullMatching$weights)
+
+#estimate the treatment effect
+library(survey)
+design.fullMatching <- svydesign(ids=~1, weights=~weights,
+                                 data=data.fullMatching)
+#fit regression model
+model.fullMatching <- svyglm(velocity_mean_end ~ MS.NonMS, design.fullMatching, family=gaussian())
+summary(model.fullMatching)
+
+#estimate treatment effects adjusting for possible violation of independence 
+#due to matching of observations (cluster effects)
+design.fullMatching2 <- svydesign(ids=~subclass, weights=~weights,
+                                  data=data.fullMatching)
+design.fullMatching2 <- as.svrepdesign(design.fullMatching2, type="bootstrap",
+                                       replicates=1000)
+model.fullMatching2 <- svyglm(velocity_mean_end~MS.NonMS, design.fullMatching2, family=gaussian())
+summary(model.fullMatching2)
+```
+
+## With GBM propensity scores
+
+```{r}
+library(MatchIt) #library for propensity score matching
+library(optmatch)
+fullMatching <- matchit(ps_formula,distance=df$pScoresGBM, 
+                        data = df, method = "full")
+#the code above gives a warning that does not apply
+
+#if you get an error that the maximum size of the problem was exceeded
+#run this code: options("optmatch_max_problem_size" = Inf)
+#before you call matchit
+
+
+#diagnose covariate balance
+balance.fullMatching <- summary(fullMatching, standardize=T)
+#extract the table of balance after matching
+table.balance <- balance.fullMatching$sum.matched
+
+
+#------------------------------------------------------
+#Estimate ATT with optimal full matched data
+#using regression
+
+#obtain matched data
+data.fullMatching <- match.data(fullMatching)
+#check the number of subclasses created
+table(data.fullMatching$subclass)
+#check the weights
+table(data.fullMatching$weights)
+sum(data.fullMatching$weights)
+
+#estimate the treatment effect
+library(survey)
+design.fullMatching <- svydesign(ids=~1, weights=~weights,
+                                 data=data.fullMatching)
+#fit regression model
+model.fullMatching <- svyglm(velocity_mean_end ~ MS.NonMS, design.fullMatching, family=gaussian())
+summary(model.fullMatching)
+
+#estimate treatment effects adjusting for possible violation of independence 
+#due to matching of observations (cluster effects)
+design.fullMatching2 <- svydesign(ids=~subclass, weights=~weights,
+                                  data=data.fullMatching)
+design.fullMatching2 <- as.svrepdesign(design.fullMatching2, type="bootstrap",
+                                       replicates=1000)
+model.fullMatching2 <- svyglm(velocity_mean_end~MS.NonMS, design.fullMatching2, family=gaussian())
+summary(model.fullMatching2)
+```
+
+# Exact matching
+
+- There is no exact matching considering all model variables. (In the end the entire population is quite small)
+- The balance after the matching with the matched data is perfect.
+
+```{r}
+library(xtable)
+# INITIAL VISUALIZATION TABLE OF THE BALANCE BEFORE MATCHING
+beforeMatching <- matchit(MS.NonMS ~ velocity_mean_start + size + main_language + n_languages + 
+    creation_year + n_commits + n_issues + n_contributors, data = df, method = "full",
+                         estimand = "ATT")
+sum_table_before <- summary(beforeMatching, standardize=T)
+print(xtable(sum_table_before$sum.all, type="latex"))
+
+##################
+
+exactMatching <- matchit(MS.NonMS ~ main_language, data = df, method = "exact",
+                         estimand = "ATT")
+exactMatching$weights # We don't do exact matching on Number of languages but a more flexible format.
+
+#diagnose covariate balance
+balance.exactMatching <- summary(exactMatching, standardize=T)
+print(xtable(balance.exactMatching$nn, type="latex"))
+
+# plot of the summary
+plot(summary(exactMatching))
+
+#extract the table of balance after matching
+table.balance <- balance.exactMatching$sum.matched
+
+#obtain matched data
+data.exactMatching <- match.data(exactMatching)
+#check the number of subclasses created
+table(data.exactMatching$subclass)
+#check the weights
+table(data.exactMatching$weights)
+sum(data.exactMatching$weights)
+
+####################
+
+# SECOND VISUALIZATION TABLE OF THE BALANCE BEFORE MATCHING
+afterMatching <- matchit(MS.NonMS ~ velocity_mean_start + size + n_languages + creation_year + n_commits + n_issues + n_contributors, data = df, method = "full",
+                         estimand = "ATT")
+sum_table_after <- summary(afterMatching, standardize=T)
+print(xtable(sum_table_after$sum.all, type="latex"))
+
+#estimate the treatment effect
+library(survey)
+design.exactMatching <- svydesign(ids=~1, weights=~weights,
+                                 data=data.exactMatching)
+#fit regression model
+final_formula <- paste(c("MS.NonMS", confounders), collapse="+")
+final_formula <- formula(paste("velocity_mean_end~",final_formula, sep=""))
+print(final_formula)
+model.exactMatching <- svyglm(final_formula, design.exactMatching, family=Gamma(link="log"))
+summary(model.exactMatching)
+```
